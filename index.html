@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#1f6feb" />
+<meta name="description" content="가천 한국어-영어 캠퍼스 앱 — 한국 대학생활에 필요한 한국어를 영어와 함께 배우세요." />
+<title>가천 한국어-영어 캠퍼스 앱 · Gachon Korean-English Campus App</title>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --ink: #1b2333;
+    --muted: #6b7280;
+    --line: #e6e9f0;
+    --brand: #1f6feb;
+    --brand-dark: #1554c0;
+    --brand-soft: #e8f0fe;
+    --accent: #00b386;
+    --warn: #f59e0b;
+    --danger: #e5484d;
+    --gold: #b8860b;
+    --shadow: 0 8px 24px rgba(20, 40, 90, 0.10);
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
+      "Noto Sans KR", Roboto, "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 0 40px rgba(0,0,0,0.04);
+  }
+
+  /* Header */
+  header.topbar {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .back-btn {
+    border: none; background: var(--brand-soft); color: var(--brand);
+    width: 36px; height: 36px; border-radius: 10px; font-size: 18px;
+    cursor: pointer; display: none; align-items: center; justify-content: center;
+    flex: 0 0 auto;
+  }
+  .back-btn.show { display: inline-flex; }
+  .topbar .title { font-weight: 800; font-size: 16px; flex: 1; min-width: 0; }
+  .topbar .title small { display: block; font-weight: 500; color: var(--muted); font-size: 11px; }
+  .topbar .progress-pill {
+    font-size: 11px; font-weight: 700; color: var(--brand);
+    background: var(--brand-soft); padding: 5px 10px; border-radius: 999px; white-space: nowrap;
+  }
+
+  main { flex: 1; padding: 16px; padding-bottom: 40px; }
+  .screen { display: none; animation: fade .25s ease; }
+  .screen.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px);} to {opacity:1; transform:none;} }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, var(--brand) 0%, #4f46e5 100%);
+    color: #fff; border-radius: var(--radius); padding: 24px 20px;
+    box-shadow: var(--shadow); margin-bottom: 16px;
+  }
+  .hero h1 { margin: 0 0 4px; font-size: 22px; line-height: 1.25; }
+  .hero .ko-name { font-size: 14px; opacity: .9; margin-bottom: 14px; }
+  .hero p { margin: 0 0 18px; font-size: 14px; opacity: .95; }
+  .hero .cta-row { display: flex; gap: 10px; }
+  .btn {
+    border: none; border-radius: 12px; padding: 12px 16px; font-size: 14px;
+    font-weight: 700; cursor: pointer; font-family: inherit; transition: transform .08s ease, filter .15s ease;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.05); }
+  .btn-light { background: #fff; color: var(--brand); }
+  .btn-ghost { background: var(--brand-soft); color: var(--brand); }
+  .btn-block { width: 100%; }
+  .btn-lg { padding: 15px 18px; font-size: 15px; }
+
+  /* Today's sentence */
+  .today-card {
+    background: var(--card); border-radius: var(--radius); padding: 18px;
+    box-shadow: var(--shadow); margin-bottom: 16px; border: 1px solid var(--line);
+  }
+  .label {
+    font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--brand); margin-bottom: 8px;
+  }
+  .today-ko { font-size: 19px; font-weight: 800; margin-bottom: 4px; }
+  .today-en { color: var(--muted); font-size: 14px; }
+  .today-actions { margin-top: 14px; display: flex; gap: 10px; align-items: center; }
+
+  .section-title { font-size: 16px; font-weight: 800; margin: 22px 4px 12px; }
+  .section-title small { font-weight: 500; color: var(--muted); }
+
+  /* Module cards */
+  .module-grid { display: grid; gap: 12px; }
+  .module-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px; box-shadow: var(--shadow); cursor: pointer; position: relative;
+    display: flex; gap: 14px; align-items: center; transition: transform .1s ease, border-color .15s;
+  }
+  .module-card:active { transform: scale(.99); }
+  .module-card .num {
+    flex: 0 0 auto; width: 44px; height: 44px; border-radius: 12px;
+    background: var(--brand-soft); color: var(--brand); font-weight: 800; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .module-card.done .num { background: var(--accent); color: #fff; }
+  .module-card .info { flex: 1; min-width: 0; }
+  .module-card .info .mt-ko { font-weight: 800; font-size: 15px; }
+  .module-card .info .mt-en { color: var(--muted); font-size: 12.5px; }
+  .module-card .tags { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+  .tag {
+    font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+    background: #eef1f6; color: var(--muted);
+  }
+  .tag.free { background: #e7f7f0; color: var(--accent); }
+  .tag.premium { background: #fbf1da; color: var(--gold); }
+  .tag.lvl { background: #eaf1ff; color: var(--brand); }
+  .tag.prog { background: var(--brand-soft); color: var(--brand); }
+  .module-card .chev { color: var(--muted); font-size: 20px; flex: 0 0 auto; }
+  .lock-badge { position: absolute; top: 12px; right: 12px; font-size: 14px; }
+
+  /* Progress bar */
+  .bar { height: 7px; background: #e9edf5; border-radius: 999px; overflow: hidden; margin-top: 9px; }
+  .bar > span { display: block; height: 100%; background: linear-gradient(90deg,var(--brand),#6366f1); border-radius: 999px; transition: width .4s ease; }
+
+  /* Flashcard */
+  .card-stage { perspective: 1200px; margin-bottom: 16px; }
+  .flashcard {
+    background: var(--card); border: 1px solid var(--line); border-radius: 22px;
+    padding: 26px 20px; box-shadow: var(--shadow); min-height: 230px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .flash-situation { font-size: 11px; color: var(--brand); font-weight: 800; text-transform: uppercase; letter-spacing:.03em; margin-bottom:14px; text-align:center; }
+  .flash-ko { font-size: 25px; font-weight: 800; text-align: center; line-height: 1.35; }
+  .flash-pron { text-align: center; color: var(--muted); font-size: 13px; margin-top: 10px; font-style: italic; }
+  .reveal { margin-top: 18px; border-top: 1px dashed var(--line); padding-top: 16px; display: none; }
+  .reveal.show { display: block; animation: fade .25s ease; }
+  .flash-en { font-size: 17px; font-weight: 700; text-align: center; color: var(--brand-dark); }
+  .flash-expl {
+    margin-top: 12px; background: var(--brand-soft); border-radius: 12px; padding: 12px 14px;
+    font-size: 13.5px; color: #33415c;
+  }
+  .flash-expl b { color: var(--brand-dark); }
+
+  .listen-row { display: flex; gap: 10px; justify-content: center; margin: 16px 0; }
+  .icon-btn {
+    border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 11px 16px;
+    font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+    color: var(--ink); font-family: inherit;
+  }
+  .icon-btn:active { transform: scale(.96); }
+  .icon-btn.fav.on { color: var(--danger); border-color: #f7c9cb; background: #fdeced; }
+  .icon-btn.speaking { color: var(--brand); border-color: var(--brand); background: var(--brand-soft); }
+
+  .speak-hint {
+    text-align:center; font-size:12.5px; color:var(--muted); background:#fff;
+    border:1px dashed var(--line); border-radius:12px; padding:10px; margin-bottom:16px;
+  }
+
+  .nav-row { display: flex; gap: 10px; }
+  .nav-row .btn { flex: 1; }
+  .card-counter { text-align: center; color: var(--muted); font-size: 12.5px; margin-bottom: 12px; font-weight: 600; }
+
+  /* Quiz */
+  .quiz-q { background: var(--card); border:1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); margin-bottom: 14px; }
+  .quiz-q .qtext { font-weight: 800; font-size: 16px; margin-bottom: 4px; }
+  .quiz-q .qsub { color: var(--muted); font-size: 12.5px; }
+  .options { display: grid; gap: 10px; margin-bottom: 14px; }
+  .opt {
+    text-align: left; background: var(--card); border: 1.5px solid var(--line); border-radius: 14px;
+    padding: 14px 16px; font-size: 14.5px; cursor: pointer; font-family: inherit; color: var(--ink);
+    transition: border-color .12s, background .12s; font-weight: 600;
+  }
+  .opt:active { transform: scale(.99); }
+  .opt.correct { border-color: var(--accent); background: #e7f7f0; color: #06794f; }
+  .opt.wrong { border-color: var(--danger); background: #fdeced; color: #b4282c; }
+  .opt.disabled { pointer-events: none; opacity: .85; }
+  .explain-box { background: var(--brand-soft); border-radius: 12px; padding: 13px 15px; font-size: 13.5px; margin-bottom: 14px; display:none; }
+  .explain-box.show { display: block; animation: fade .2s ease; }
+
+  /* Roleplay */
+  .rp-card { background: var(--card); border:1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); margin-bottom: 14px; }
+  .rp-prompt { background: linear-gradient(135deg,#4f46e5,#1f6feb); color:#fff; border-radius:14px; padding:16px; margin-bottom:14px; }
+  .rp-prompt .label { color:#cdd9ff; }
+  .rp-prompt .p-ko { font-weight: 800; font-size: 15px; }
+  .rp-prompt .p-en { font-size: 13px; opacity:.9; margin-top:4px; }
+  .bubble { border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; font-size: 14.5px; max-width: 88%; }
+  .bubble.a { background: #eef1f6; border-bottom-left-radius: 4px; }
+  .bubble.b { background: var(--brand-soft); margin-left: auto; border-bottom-right-radius: 4px; text-align:right; }
+  .bubble .who { font-size: 10.5px; font-weight: 800; color: var(--muted); display:block; margin-bottom:3px; }
+  .expr-list { list-style:none; padding:0; margin: 6px 0 0; }
+  .expr-list li { padding: 9px 12px; background:#fff; border:1px solid var(--line); border-radius:10px; margin-bottom:7px; font-weight:600; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .mini-speak { border:none; background:var(--brand-soft); color:var(--brand); border-radius:8px; padding:6px 10px; cursor:pointer; font-size:13px; flex:0 0 auto; }
+
+  /* Completion */
+  .complete-hero { text-align: center; padding: 26px 18px; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border:1px solid var(--line); margin-bottom: 16px; }
+  .complete-hero .emoji { font-size: 52px; }
+  .complete-hero h2 { margin: 8px 0 4px; }
+  .complete-hero p { color: var(--muted); margin: 0; font-size: 14px; }
+  .stat-row { display: flex; gap: 12px; margin-bottom: 16px; }
+  .stat {
+    flex: 1; background: var(--card); border:1px solid var(--line); border-radius: 14px; padding: 16px 10px;
+    text-align: center; box-shadow: var(--shadow);
+  }
+  .stat .big { font-size: 26px; font-weight: 800; color: var(--brand); }
+  .stat .lbl { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+
+  .info-card { background: var(--card); border:1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 14px; }
+  .info-card h3 { margin: 0 0 8px; font-size: 14px; }
+  .info-card p { margin: 0; font-size: 13px; color: var(--muted); }
+  .culture { border-left: 4px solid var(--warn); }
+  .culture h3 { color: #b45309; }
+
+  /* Notice */
+  .notice {
+    background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; border-radius: 12px;
+    padding: 12px 14px; font-size: 12px; margin-bottom: 16px; line-height: 1.5;
+  }
+  .notice b { display:block; margin-bottom:3px; }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(15,23,42,.55); z-index: 80;
+    display: none; align-items: flex-end; justify-content: center;
+  }
+  .modal-backdrop.show { display: flex; animation: fade .2s ease; }
+  .modal {
+    background: #fff; width: 100%; max-width: 480px; border-radius: 22px 22px 0 0;
+    padding: 24px 20px 30px; box-shadow: 0 -10px 40px rgba(0,0,0,.2);
+    animation: slideUp .28s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%);} to { transform:none;} }
+  .modal .lock-icon { font-size: 40px; text-align:center; }
+  .modal h2 { margin: 8px 0 6px; text-align:center; font-size: 19px; }
+  .modal p { color: var(--muted); font-size: 13.5px; text-align: center; margin: 0 0 16px; }
+  .plan { border:1.5px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+  .plan.featured { border-color: var(--brand); background: var(--brand-soft); }
+  .plan .pname { font-weight: 800; display:flex; justify-content:space-between; align-items:center; }
+  .plan .pname .price { color: var(--brand); }
+  .plan ul { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; color: #475569; }
+  .modal .close-x { display:block; width:100%; margin-top: 8px; }
+
+  /* Bottom nav */
+  .tabbar {
+    position: sticky; bottom: 0; z-index: 25; display: flex;
+    background: rgba(255,255,255,.95); backdrop-filter: blur(8px);
+    border-top: 1px solid var(--line);
+  }
+  .tabbar button {
+    flex: 1; border: none; background: none; padding: 9px 0 10px; cursor: pointer;
+    font-family: inherit; color: var(--muted); font-size: 10.5px; font-weight: 700;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .tabbar button .ic { font-size: 19px; }
+  .tabbar button.active { color: var(--brand); }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
+  footer.foot { text-align: center; color: #9aa3b2; font-size: 11px; padding: 18px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <button class="back-btn" id="backBtn" aria-label="뒤로 / Back">‹</button>
+    <div class="title" id="topTitle">가천 캠퍼스 한국어<small>Gachon Korean-English Campus App</small></div>
+    <span class="progress-pill" id="topProgress">0%</span>
+  </header>
+
+  <main>
+    <!-- HOME -->
+    <section class="screen active" id="screen-home">
+      <div class="hero">
+        <h1 id="heroNameEn">Gachon Korean-English Campus App</h1>
+        <div class="ko-name" id="heroNameKo">가천 한국어-영어 캠퍼스 앱</div>
+        <p id="heroTagline">한국 대학생활에 필요한 한국어를 영어와 함께 쉽고 빠르게 배우세요.</p>
+        <div class="cta-row">
+          <button class="btn btn-light" id="startBtn">시작하기 · Start</button>
+          <button class="btn btn-ghost" style="background:rgba(255,255,255,.18);color:#fff;" id="freeTrialBtn">무료 체험 · Free</button>
+        </div>
+      </div>
+
+      <div class="today-card">
+        <div class="label">오늘의 문장 · Sentence of the Day</div>
+        <div class="today-ko" id="todayKo">—</div>
+        <div class="today-en" id="todayEn">—</div>
+        <div class="today-actions">
+          <button class="icon-btn" id="todayListen">🔊 듣기 · Listen</button>
+          <button class="btn btn-primary" id="todayLearn" style="margin-left:auto;">학습 →</button>
+        </div>
+      </div>
+
+      <div class="today-card">
+        <div class="label">나의 학습 진도 · My Progress</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <strong id="overallText" style="font-size:14px;">0 / 0 문장 학습</strong>
+          <span id="overallPct" style="color:var(--brand);font-weight:800;">0%</span>
+        </div>
+        <div class="bar"><span id="overallBar" style="width:0%"></span></div>
+      </div>
+
+      <div class="section-title">학습 모듈 바로가기 <small>· Modules</small></div>
+      <div class="module-grid" id="homeModules"></div>
+
+      <div class="notice" style="margin-top:18px;">
+        <b>⚠️ 개인정보 안내 · Privacy Notice</b>
+        본 앱은 한국어 학습을 위한 교육용 앱입니다. 여권번호, 외국인등록번호, 주소, 전화번호 등 민감한 개인정보를 입력하지 마세요.<br>
+        This is an educational app. Please do not enter sensitive personal information such as passport, ID, address, or phone numbers.
+      </div>
+      <footer class="foot">MVP · 가천대학교 외국인 유학생 대상 · localStorage 기반 진도 저장</footer>
+    </section>
+
+    <!-- MODULES -->
+    <section class="screen" id="screen-modules">
+      <div class="section-title" style="margin-top:4px;">학습 모듈 <small>· 10 Modules</small></div>
+      <div class="module-grid" id="moduleList"></div>
+    </section>
+
+    <!-- CARDS -->
+    <section class="screen" id="screen-cards">
+      <div class="card-counter" id="cardCounter">1 / 5</div>
+      <div class="card-stage">
+        <div class="flashcard" id="flashcard">
+          <div class="flash-situation" id="flashSituation"></div>
+          <div class="flash-ko" id="flashKo"></div>
+          <div class="flash-pron" id="flashPron"></div>
+          <div class="reveal" id="reveal">
+            <div class="flash-en" id="flashEn"></div>
+            <div class="flash-expl" id="flashExpl"></div>
+          </div>
+        </div>
+      </div>
+      <div class="listen-row">
+        <button class="icon-btn" id="cardListen">🔊 듣기 · Listen</button>
+        <button class="icon-btn fav" id="cardFav">♡ 즐겨찾기</button>
+      </div>
+      <div class="speak-hint">🎙️ 한국어 문장을 듣고 따라 말해 보세요. <br>Listen, then repeat the Korean sentence aloud.</div>
+      <button class="btn btn-ghost btn-block" id="toggleReveal" style="margin-bottom:10px;">영어 번역·설명 보기 · Show meaning</button>
+      <div class="nav-row">
+        <button class="btn btn-ghost" id="prevCard">← 이전</button>
+        <button class="btn btn-primary" id="nextCard">다음 →</button>
+      </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="screen" id="screen-quiz">
+      <div class="card-counter" id="quizCounter">문제 1 / 5</div>
+      <div class="quiz-q">
+        <div class="qtext" id="quizQ"></div>
+        <div class="qsub" id="quizSub"></div>
+      </div>
+      <div class="options" id="quizOptions"></div>
+      <div class="explain-box" id="quizExplain"></div>
+      <button class="btn btn-primary btn-block" id="quizNext" disabled>다음 문제 →</button>
+    </section>
+
+    <!-- ROLEPLAY -->
+    <section class="screen" id="screen-roleplay">
+      <div class="rp-prompt">
+        <div class="label">역할극 · Role-play</div>
+        <div class="p-ko" id="rpPromptKo"></div>
+        <div class="p-en" id="rpPromptEn"></div>
+      </div>
+      <div class="rp-card">
+        <div class="label">대화 예시 · Sample dialogue</div>
+        <div class="bubble a"><span class="who">A</span><span id="rpA"></span></div>
+        <div class="bubble b"><span class="who">B</span><span id="rpB"></span></div>
+      </div>
+      <div class="rp-card">
+        <div class="label">사용할 표현 · Useful expressions</div>
+        <ul class="expr-list" id="rpExpr"></ul>
+      </div>
+      <div class="info-card" style="background:var(--brand-soft);border-color:#c7d8fb;">
+        <h3>🤖 AI 튜터 확장 예정 · Coming soon</h3>
+        <p>유료 버전에서는 AI 튜터와 실제로 대화하며 발음과 표현을 교정받을 수 있습니다. In the paid version, practice live with an AI tutor that corrects your pronunciation and phrasing.</p>
+      </div>
+      <button class="btn btn-primary btn-block" id="rpToQuiz">퀴즈 풀기 → · Take the quiz</button>
+    </section>
+
+    <!-- COMPLETE -->
+    <section class="screen" id="screen-complete">
+      <div class="complete-hero">
+        <div class="emoji">🎉</div>
+        <h2 id="completeTitle">모듈 완료!</h2>
+        <p id="completeSub">Module complete</p>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="big" id="statSentences">0</div><div class="lbl">학습 문장<br>Sentences</div></div>
+        <div class="stat"><div class="big" id="statQuiz">0/0</div><div class="lbl">맞힌 퀴즈<br>Quiz score</div></div>
+        <div class="stat"><div class="big" id="statPct">0%</div><div class="lbl">전체 진도<br>Overall</div></div>
+      </div>
+      <div class="info-card">
+        <h3>📌 복습 추천 문장 · Review suggestion</h3>
+        <p id="reviewSentence">—</p>
+      </div>
+      <div class="info-card culture">
+        <h3>💡 문화 팁 · Culture tip</h3>
+        <p id="completeCulture">—</p>
+      </div>
+      <div class="info-card" id="nextModuleCard" style="cursor:pointer;">
+        <h3>➡️ 다음 모듈 · Next module</h3>
+        <p id="nextModuleText">—</p>
+      </div>
+      <button class="btn btn-ghost btn-block" id="shareBtn" style="margin-bottom:10px;">📤 결과 공유·저장 · Share</button>
+      <button class="btn btn-primary btn-block" id="backToModules">모듈 목록으로 · All modules</button>
+    </section>
+
+    <!-- FAVORITES -->
+    <section class="screen" id="screen-fav">
+      <div class="section-title" style="margin-top:4px;">즐겨찾기 <small>· Favorites</small></div>
+      <div id="favList"></div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button data-tab="home" class="active"><span class="ic">🏠</span>홈</button>
+    <button data-tab="modules"><span class="ic">📚</span>모듈</button>
+    <button data-tab="fav"><span class="ic">⭐</span>즐겨찾기</button>
+  </nav>
+</div>
+
+<!-- Premium modal -->
+<div class="modal-backdrop" id="premiumModal">
+  <div class="modal">
+    <div class="lock-icon">🔒</div>
+    <h2>프리미엄 콘텐츠 · Premium</h2>
+    <p>이 모듈은 유료 콘텐츠입니다. MVP 데모에서는 미리보기로 모든 모듈을 열어볼 수 있어요.<br>This module is premium. In this MVP demo you can preview all modules.</p>
+    <div class="plan">
+      <div class="pname">Free <span class="price">₩0</span></div>
+      <ul><li>인사 · 수강신청 · 과제 일부</li><li>오늘의 문장 · 샘플 퀴즈</li></ul>
+    </div>
+    <div class="plan">
+      <div class="pname">Basic <span class="price">월 ₩4,900</span></div>
+      <ul><li>전체 10개 모듈 · 복습 기능</li><li>퀴즈 전체 · 학습 진도 저장</li></ul>
+    </div>
+    <div class="plan featured">
+      <div class="pname">Premium <span class="price">월 ₩9,900</span></div>
+      <ul><li>AI 튜터 · 발음 피드백</li><li>역할극 · 수료증 발급</li></ul>
+    </div>
+    <button class="btn btn-primary btn-block" id="previewBtn" style="margin-top:6px;">🔓 데모 미리보기 · Preview now</button>
+    <button class="btn btn-ghost btn-block close-x" id="closeModal">닫기 · Close</button>
+  </div>
+</div>
+
+<script src="content.js"></script>
+<script>
+(function () {
+  "use strict";
+  const DATA = window.KOLAN_CONTENT;
+  const MODULES = DATA.modules;
+  const STORE_KEY = "kolan_state_v1";
+
+  // ---------- State ----------
+  const defaultState = { completedModules: [], learnedSentences: [], quizScores: {}, favorites: [], unlocked: false };
+  let state = loadState();
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) return Object.assign({}, defaultState, JSON.parse(raw));
+    } catch (e) {}
+    return JSON.parse(JSON.stringify(defaultState));
+  }
+  function saveState() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  const totalSentences = MODULES.reduce((n, m) => n + m.sentences.length, 0);
+
+  // ---------- Helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const screens = ["home", "modules", "cards", "quiz", "roleplay", "complete", "fav"];
+  let history = ["home"];
+
+  function showScreen(name, push = true) {
+    screens.forEach((s) => $("screen-" + s).classList.toggle("active", s === name));
+    if (push) history.push(name);
+    // back button visibility
+    const rootTabs = ["home", "modules", "fav"];
+    $("backBtn").classList.toggle("show", !rootTabs.includes(name));
+    // tab highlight
+    document.querySelectorAll(".tabbar button").forEach((b) =>
+      b.classList.toggle("active", b.dataset.tab === name)
+    );
+    window.scrollTo(0, 0);
+  }
+
+  function goBack() {
+    if (history.length > 1) history.pop();
+    const prev = history[history.length - 1] || "home";
+    showScreen(prev, false);
+  }
+
+  function uniqPush(arr, v) { if (!arr.includes(v)) arr.push(v); }
+
+  // ---------- Speech ----------
+  let koVoice = null;
+  function pickVoice() {
+    const voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+    koVoice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith("ko")) || null;
+  }
+  if (window.speechSynthesis) {
+    pickVoice();
+    speechSynthesis.onvoiceschanged = pickVoice;
+  }
+  function speak(text, btn) {
+    if (!window.speechSynthesis) {
+      alert("이 브라우저는 음성 기능을 지원하지 않습니다.\nThis browser does not support speech.");
+      return;
+    }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ko-KR";
+    if (koVoice) u.voice = koVoice;
+    u.rate = 0.9;
+    if (btn) {
+      btn.classList.add("speaking");
+      u.onend = u.onerror = () => btn.classList.remove("speaking");
+    }
+    speechSynthesis.speak(u);
+  }
+
+  // ---------- Progress ----------
+  function moduleProgress(m) {
+    const learned = m.sentences.filter((s) => state.learnedSentences.includes(s.sentence_id)).length;
+    return { learned, total: m.sentences.length };
+  }
+  function overallPct() {
+    return totalSentences ? Math.round((state.learnedSentences.length / totalSentences) * 100) : 0;
+  }
+  function refreshProgressUI() {
+    const pct = overallPct();
+    $("topProgress").textContent = pct + "%";
+    $("overallPct").textContent = pct + "%";
+    $("overallBar").style.width = pct + "%";
+    $("overallText").textContent = state.learnedSentences.length + " / " + totalSentences + " 문장 학습";
+  }
+
+  // ---------- Render module card ----------
+  function moduleCardEl(m) {
+    const prog = moduleProgress(m);
+    const done = state.completedModules.includes(m.module_id);
+    const el = document.createElement("div");
+    el.className = "module-card" + (done ? " done" : "");
+    const locked = !m.is_free && !state.unlocked;
+    el.innerHTML =
+      '<div class="num">' + (done ? "✓" : m.module_id) + "</div>" +
+      '<div class="info">' +
+        '<div class="mt-ko">' + m.module_title_ko + "</div>" +
+        '<div class="mt-en">' + m.module_title_en + "</div>" +
+        '<div class="tags">' +
+          '<span class="tag lvl">' + (m.level === "beginner" ? "초급 Beginner" : "중급 Inter.") + "</span>" +
+          (m.is_free ? '<span class="tag free">무료 Free</span>' : '<span class="tag premium">유료 Premium</span>') +
+          '<span class="tag prog">' + prog.learned + "/" + prog.total + "</span>" +
+        "</div>" +
+      "</div>" +
+      (locked ? '<span class="lock-badge">🔒</span>' : '<span class="chev">›</span>');
+    el.addEventListener("click", () => openModule(m.module_id));
+    return el;
+  }
+
+  function renderModules() {
+    const list = $("moduleList");
+    list.innerHTML = "";
+    MODULES.forEach((m) => list.appendChild(moduleCardEl(m)));
+    const home = $("homeModules");
+    home.innerHTML = "";
+    MODULES.slice(0, 4).forEach((m) => home.appendChild(moduleCardEl(m)));
+  }
+
+  // ---------- Module flow ----------
+  let cur = { module: null, cardIndex: 0, quizIndex: 0, quizCorrect: 0, revealed: false };
+
+  function openModule(id) {
+    const m = MODULES.find((x) => x.module_id === id);
+    if (!m) return;
+    if (!m.is_free && !state.unlocked) {
+      pendingModule = id;
+      $("premiumModal").classList.add("show");
+      return;
+    }
+    cur = { module: m, cardIndex: 0, quizIndex: 0, quizCorrect: 0, revealed: false };
+    $("topTitle").innerHTML = m.module_title_ko + "<small>" + m.module_title_en + "</small>";
+    renderCard();
+    showScreen("cards");
+  }
+
+  let pendingModule = null;
+
+  // ---------- Cards ----------
+  function renderCard() {
+    const m = cur.module;
+    const s = m.sentences[cur.cardIndex];
+    cur.revealed = false;
+    $("cardCounter").textContent = (cur.cardIndex + 1) + " / " + m.sentences.length;
+    $("flashSituation").textContent = s.situation || "";
+    $("flashKo").textContent = s.sentence_ko;
+    $("flashPron").textContent = s.pronunciation;
+    $("flashEn").textContent = s.sentence_en;
+    $("flashExpl").innerHTML = "<b>설명 · Explanation</b><br>" + s.explanation_en;
+    $("reveal").classList.remove("show");
+    $("toggleReveal").textContent = "영어 번역·설명 보기 · Show meaning";
+    updateFavBtn(s.sentence_id);
+    $("nextCard").textContent = (cur.cardIndex === m.sentences.length - 1) ? "역할극 → " : "다음 →";
+    // mark learned
+    uniqPush(state.learnedSentences, s.sentence_id);
+    saveState();
+    refreshProgressUI();
+  }
+
+  function updateFavBtn(id) {
+    const on = state.favorites.includes(id);
+    const b = $("cardFav");
+    b.classList.toggle("on", on);
+    b.textContent = (on ? "♥ 즐겨찾기" : "♡ 즐겨찾기");
+  }
+
+  $("toggleReveal").addEventListener("click", () => {
+    cur.revealed = !cur.revealed;
+    $("reveal").classList.toggle("show", cur.revealed);
+    $("toggleReveal").textContent = cur.revealed ? "숨기기 · Hide" : "영어 번역·설명 보기 · Show meaning";
+  });
+  $("cardListen").addEventListener("click", () =>
+    speak(cur.module.sentences[cur.cardIndex].sentence_ko, $("cardListen"))
+  );
+  $("cardFav").addEventListener("click", () => {
+    const id = cur.module.sentences[cur.cardIndex].sentence_id;
+    if (state.favorites.includes(id)) state.favorites = state.favorites.filter((x) => x !== id);
+    else state.favorites.push(id);
+    saveState();
+    updateFavBtn(id);
+  });
+  $("prevCard").addEventListener("click", () => {
+    if (cur.cardIndex > 0) { cur.cardIndex--; renderCard(); }
+  });
+  $("nextCard").addEventListener("click", () => {
+    if (cur.cardIndex < cur.module.sentences.length - 1) { cur.cardIndex++; renderCard(); }
+    else startRoleplay();
+  });
+
+  // ---------- Roleplay ----------
+  function startRoleplay() {
+    const rp = cur.module.roleplay;
+    $("rpPromptKo").textContent = rp.prompt_ko;
+    $("rpPromptEn").textContent = rp.prompt_en;
+    $("rpA").textContent = rp.role_a_ko;
+    $("rpB").textContent = rp.role_b_ko;
+    const ul = $("rpExpr");
+    ul.innerHTML = "";
+    rp.expressions.forEach((ex) => {
+      const li = document.createElement("li");
+      const span = document.createElement("span");
+      span.textContent = ex;
+      const b = document.createElement("button");
+      b.className = "mini-speak";
+      b.textContent = "🔊";
+      b.addEventListener("click", () => speak(ex, b));
+      li.appendChild(span);
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+    showScreen("roleplay");
+  }
+  $("rpToQuiz").addEventListener("click", startQuiz);
+
+  // ---------- Quiz ----------
+  function startQuiz() {
+    cur.quizIndex = 0;
+    cur.quizCorrect = 0;
+    renderQuiz();
+    showScreen("quiz");
+  }
+
+  function shuffle(a) {
+    const arr = a.slice();
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function renderQuiz() {
+    const m = cur.module;
+    const s = m.sentences[cur.quizIndex];
+    $("quizCounter").textContent = "문제 " + (cur.quizIndex + 1) + " / " + m.sentences.length;
+    $("quizQ").textContent = s.quiz_question;
+    $("quizSub").textContent = "한국어: " + s.sentence_ko;
+    const box = $("quizOptions");
+    box.innerHTML = "";
+    $("quizExplain").classList.remove("show");
+    $("quizNext").disabled = true;
+    $("quizNext").textContent = (cur.quizIndex === m.sentences.length - 1) ? "결과 보기 → " : "다음 문제 →";
+    const opts = shuffle(s.quiz_options);
+    opts.forEach((opt) => {
+      const b = document.createElement("button");
+      b.className = "opt";
+      b.textContent = opt;
+      b.addEventListener("click", () => answer(b, opt, s));
+      box.appendChild(b);
+    });
+  }
+
+  function answer(btn, opt, s) {
+    const correct = opt === s.quiz_answer;
+    document.querySelectorAll("#quizOptions .opt").forEach((o) => {
+      o.classList.add("disabled");
+      if (o.textContent === s.quiz_answer) o.classList.add("correct");
+    });
+    if (!correct) btn.classList.add("wrong");
+    else cur.quizCorrect++;
+    const ex = $("quizExplain");
+    ex.innerHTML = (correct ? "✅ 정답입니다! · Correct!" : "❌ 정답은 “" + s.quiz_answer + "” 입니다.") +
+      "<br><b>해설:</b> " + s.explanation_en;
+    ex.classList.add("show");
+    $("quizNext").disabled = false;
+  }
+
+  $("quizNext").addEventListener("click", () => {
+    if (cur.quizIndex < cur.module.sentences.length - 1) { cur.quizIndex++; renderQuiz(); }
+    else finishModule();
+  });
+
+  // ---------- Completion ----------
+  function finishModule() {
+    const m = cur.module;
+    uniqPush(state.completedModules, m.module_id);
+    state.quizScores[m.module_id] = { correct: cur.quizCorrect, total: m.sentences.length };
+    saveState();
+    refreshProgressUI();
+
+    $("completeTitle").textContent = m.module_title_ko + " 완료!";
+    $("completeSub").textContent = m.module_title_en + " complete";
+    $("statSentences").textContent = m.sentences.length;
+    $("statQuiz").textContent = cur.quizCorrect + "/" + m.sentences.length;
+    $("statPct").textContent = overallPct() + "%";
+    const review = m.sentences[Math.floor(Math.random() * m.sentences.length)];
+    $("reviewSentence").textContent = review.sentence_ko + "  —  " + review.sentence_en;
+    $("completeCulture").textContent = m.culture_tip;
+
+    const next = MODULES.find((x) => x.module_id === m.module_id + 1);
+    const card = $("nextModuleCard");
+    if (next) {
+      $("nextModuleText").textContent = next.module_title_ko + " · " + next.module_title_en;
+      card.style.display = "block";
+      card.onclick = () => openModule(next.module_id);
+    } else {
+      $("nextModuleText").textContent = "모든 모듈을 완료했습니다! 🎓 All modules complete!";
+      card.style.display = "block";
+      card.onclick = () => goTab("modules");
+    }
+    showScreen("complete");
+  }
+
+  $("backToModules").addEventListener("click", () => goTab("modules"));
+  $("shareBtn").addEventListener("click", () => {
+    const text = "가천 한국어-영어 캠퍼스 앱에서 " + state.learnedSentences.length +
+      "문장을 학습했어요! (" + overallPct() + "%) #한국어 #유학생";
+    if (navigator.share) navigator.share({ title: "Gachon Campus Korean", text: text }).catch(() => {});
+    else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => alert("결과가 복사되었습니다!\nCopied to clipboard."));
+    } else alert(text);
+  });
+
+  // ---------- Favorites ----------
+  function renderFavorites() {
+    const wrap = $("favList");
+    wrap.innerHTML = "";
+    const all = [];
+    MODULES.forEach((m) => m.sentences.forEach((s) => { if (state.favorites.includes(s.sentence_id)) all.push({ m, s }); }));
+    if (!all.length) {
+      wrap.innerHTML = '<div class="empty">⭐ 아직 즐겨찾기한 문장이 없습니다.<br>No favorites yet. Tap ♡ on a card to save it.</div>';
+      return;
+    }
+    all.forEach(({ m, s }) => {
+      const el = document.createElement("div");
+      el.className = "today-card";
+      el.innerHTML =
+        '<div class="label">' + m.module_title_ko + " · " + m.module_title_en + "</div>" +
+        '<div class="today-ko">' + s.sentence_ko + "</div>" +
+        '<div class="today-en">' + s.sentence_en + "</div>";
+      const row = document.createElement("div");
+      row.className = "today-actions";
+      const lb = document.createElement("button");
+      lb.className = "icon-btn"; lb.textContent = "🔊 듣기";
+      lb.addEventListener("click", () => speak(s.sentence_ko, lb));
+      const rb = document.createElement("button");
+      rb.className = "btn btn-ghost"; rb.style.marginLeft = "auto"; rb.textContent = "♥ 삭제";
+      rb.addEventListener("click", () => {
+        state.favorites = state.favorites.filter((x) => x !== s.sentence_id);
+        saveState(); renderFavorites();
+      });
+      row.appendChild(lb); row.appendChild(rb);
+      el.appendChild(row);
+      wrap.appendChild(el);
+    });
+  }
+
+  // ---------- Today's sentence ----------
+  function setToday() {
+    const flat = [];
+    MODULES.forEach((m) => m.sentences.forEach((s) => flat.push(s)));
+    const day = Math.floor(Date.now() / 86400000);
+    const s = flat[day % flat.length];
+    $("todayKo").textContent = s.sentence_ko;
+    $("todayEn").textContent = s.sentence_en;
+    $("todayListen").onclick = () => speak(s.sentence_ko, $("todayListen"));
+    $("todayLearn").onclick = () => {
+      const owner = MODULES.find((m) => m.sentences.includes(s));
+      openModule(owner.module_id);
+    };
+  }
+
+  // ---------- Tabs / nav ----------
+  function goTab(tab) {
+    history = ["home"];
+    if (tab !== "home") history.push(tab);
+    if (tab === "modules") renderModules();
+    if (tab === "fav") renderFavorites();
+    if (tab === "home") { $("topTitle").innerHTML = '가천 캠퍼스 한국어<small>Gachon Korean-English Campus App</small>'; }
+    showScreen(tab, false);
+  }
+  document.querySelectorAll(".tabbar button").forEach((b) =>
+    b.addEventListener("click", () => goTab(b.dataset.tab))
+  );
+  $("backBtn").addEventListener("click", goBack);
+  $("startBtn").addEventListener("click", () => goTab("modules"));
+  $("freeTrialBtn").addEventListener("click", () => {
+    const firstFree = MODULES.find((m) => m.is_free);
+    openModule(firstFree.module_id);
+  });
+
+  // ---------- Premium modal ----------
+  $("closeModal").addEventListener("click", () => $("premiumModal").classList.remove("show"));
+  $("premiumModal").addEventListener("click", (e) => { if (e.target.id === "premiumModal") $("premiumModal").classList.remove("show"); });
+  $("previewBtn").addEventListener("click", () => {
+    state.unlocked = true; saveState();
+    $("premiumModal").classList.remove("show");
+    renderModules();
+    if (pendingModule != null) { const id = pendingModule; pendingModule = null; openModule(id); }
+  });
+
+  // ---------- Init ----------
+  $("heroNameEn").textContent = DATA.meta.app_name_en;
+  $("heroNameKo").textContent = DATA.meta.app_name_ko;
+  $("heroTagline").textContent = DATA.meta.tagline_ko;
+  setToday();
+  renderModules();
+  refreshProgressUI();
+})();
+</script>
+</body>
+</html>
