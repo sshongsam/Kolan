@@ -46,6 +46,12 @@ It is mobile-first and works in any modern mobile or desktop browser.
 |------|-------------|
 | `index.html` | 앱 전체 (UI + 스타일 + 로직). 모바일 최적화 단일 페이지 앱 |
 | `content.js` | 학습 콘텐츠 데이터 (10개 모듈 / 50개 문장 / 50개 퀴즈 / 역할극 / 문화 팁) |
+| `dist/kolan-campus-korean-v1.1.html` | **학생 배포용 단일 파일** — 콘텐츠 인라인, 파일 하나로 실행 |
+
+## 변경 이력 · Changelog
+
+- **v1.1.0** — 단일 파일 배포판(`dist/`), 🐢 천천히 듣기, 퀴즈 2종 혼합(객관식 + 영→한 문장 고르기), 다크 모드 지원
+- **v1.0.0** — 최초 MVP
 
 ### 콘텐츠 데이터 구조 · Content schema
 

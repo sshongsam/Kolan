@@ -1,0 +1,1781 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#1f6feb" />
+<meta name="description" content="가천 한국어-영어 캠퍼스 앱 — 한국 대학생활에 필요한 한국어를 영어와 함께 배우세요." />
+<title>가천 한국어-영어 캠퍼스 앱 · Gachon Korean-English Campus App</title>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --ink: #1b2333;
+    --muted: #6b7280;
+    --line: #e6e9f0;
+    --brand: #1f6feb;
+    --brand-dark: #1554c0;
+    --brand-soft: #e8f0fe;
+    --accent: #00b386;
+    --warn: #f59e0b;
+    --danger: #e5484d;
+    --gold: #b8860b;
+    --chip: #eef1f6;
+    --chrome: rgba(255, 255, 255, 0.92);
+    --expl-ink: #33415c;
+    --shadow: 0 8px 24px rgba(20, 40, 90, 0.10);
+    --radius: 18px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1320; --card: #171e2e; --ink: #e7ebf4; --muted: #8f9bb0;
+      --line: #28324a; --brand-soft: #1c2b4d; --chip: #222c42;
+      --chrome: rgba(14, 19, 32, 0.92); --expl-ink: #c6d4ee;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1320; --card: #171e2e; --ink: #e7ebf4; --muted: #8f9bb0;
+    --line: #28324a; --brand-soft: #1c2b4d; --chip: #222c42;
+    --chrome: rgba(14, 19, 32, 0.92); --expl-ink: #c6d4ee;
+    --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
+      "Noto Sans KR", Roboto, "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 0 40px rgba(0,0,0,0.04);
+  }
+
+  /* Header */
+  header.topbar {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px;
+    background: var(--chrome);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .back-btn {
+    border: none; background: var(--brand-soft); color: var(--brand);
+    width: 36px; height: 36px; border-radius: 10px; font-size: 18px;
+    cursor: pointer; display: none; align-items: center; justify-content: center;
+    flex: 0 0 auto;
+  }
+  .back-btn.show { display: inline-flex; }
+  .topbar .title { font-weight: 800; font-size: 16px; flex: 1; min-width: 0; }
+  .topbar .title small { display: block; font-weight: 500; color: var(--muted); font-size: 11px; }
+  .topbar .progress-pill {
+    font-size: 11px; font-weight: 700; color: var(--brand);
+    background: var(--brand-soft); padding: 5px 10px; border-radius: 999px; white-space: nowrap;
+  }
+
+  main { flex: 1; padding: 16px; padding-bottom: 40px; }
+  .screen { display: none; animation: fade .25s ease; }
+  .screen.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px);} to {opacity:1; transform:none;} }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, var(--brand) 0%, #4f46e5 100%);
+    color: #fff; border-radius: var(--radius); padding: 24px 20px;
+    box-shadow: var(--shadow); margin-bottom: 16px;
+  }
+  .hero h1 { margin: 0 0 4px; font-size: 22px; line-height: 1.25; }
+  .hero .ko-name { font-size: 14px; opacity: .9; margin-bottom: 14px; }
+  .hero p { margin: 0 0 18px; font-size: 14px; opacity: .95; }
+  .hero .cta-row { display: flex; gap: 10px; }
+  .btn {
+    border: none; border-radius: 12px; padding: 12px 16px; font-size: 14px;
+    font-weight: 700; cursor: pointer; font-family: inherit; transition: transform .08s ease, filter .15s ease;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.05); }
+  .btn-light { background: #fff; color: var(--brand); }
+  .btn-ghost { background: var(--brand-soft); color: var(--brand); }
+  .btn-block { width: 100%; }
+  .btn-lg { padding: 15px 18px; font-size: 15px; }
+
+  /* Today's sentence */
+  .today-card {
+    background: var(--card); border-radius: var(--radius); padding: 18px;
+    box-shadow: var(--shadow); margin-bottom: 16px; border: 1px solid var(--line);
+  }
+  .label {
+    font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--brand); margin-bottom: 8px;
+  }
+  .today-ko { font-size: 19px; font-weight: 800; margin-bottom: 4px; }
+  .today-en { color: var(--muted); font-size: 14px; }
+  .today-actions { margin-top: 14px; display: flex; gap: 10px; align-items: center; }
+
+  .section-title { font-size: 16px; font-weight: 800; margin: 22px 4px 12px; }
+  .section-title small { font-weight: 500; color: var(--muted); }
+
+  /* Module cards */
+  .module-grid { display: grid; gap: 12px; }
+  .module-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px; box-shadow: var(--shadow); cursor: pointer; position: relative;
+    display: flex; gap: 14px; align-items: center; transition: transform .1s ease, border-color .15s;
+  }
+  .module-card:active { transform: scale(.99); }
+  .module-card .num {
+    flex: 0 0 auto; width: 44px; height: 44px; border-radius: 12px;
+    background: var(--brand-soft); color: var(--brand); font-weight: 800; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .module-card.done .num { background: var(--accent); color: #fff; }
+  .module-card .info { flex: 1; min-width: 0; }
+  .module-card .info .mt-ko { font-weight: 800; font-size: 15px; }
+  .module-card .info .mt-en { color: var(--muted); font-size: 12.5px; }
+  .module-card .tags { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+  .tag {
+    font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+    background: var(--chip); color: var(--muted);
+  }
+  .tag.free { background: #e7f7f0; color: var(--accent); }
+  .tag.premium { background: #fbf1da; color: var(--gold); }
+  .tag.lvl { background: #eaf1ff; color: var(--brand); }
+  .tag.prog { background: var(--brand-soft); color: var(--brand); }
+  .module-card .chev { color: var(--muted); font-size: 20px; flex: 0 0 auto; }
+  .lock-badge { position: absolute; top: 12px; right: 12px; font-size: 14px; }
+
+  /* Progress bar */
+  .bar { height: 7px; background: var(--chip); border-radius: 999px; overflow: hidden; margin-top: 9px; }
+  .bar > span { display: block; height: 100%; background: linear-gradient(90deg,var(--brand),#6366f1); border-radius: 999px; transition: width .4s ease; }
+
+  /* Flashcard */
+  .card-stage { perspective: 1200px; margin-bottom: 16px; }
+  .flashcard {
+    background: var(--card); border: 1px solid var(--line); border-radius: 22px;
+    padding: 26px 20px; box-shadow: var(--shadow); min-height: 230px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .flash-situation { font-size: 11px; color: var(--brand); font-weight: 800; text-transform: uppercase; letter-spacing:.03em; margin-bottom:14px; text-align:center; }
+  .flash-ko { font-size: 25px; font-weight: 800; text-align: center; line-height: 1.35; }
+  .flash-pron { text-align: center; color: var(--muted); font-size: 13px; margin-top: 10px; font-style: italic; }
+  .reveal { margin-top: 18px; border-top: 1px dashed var(--line); padding-top: 16px; display: none; }
+  .reveal.show { display: block; animation: fade .25s ease; }
+  .flash-en { font-size: 17px; font-weight: 700; text-align: center; color: var(--brand-dark); }
+  .flash-expl {
+    margin-top: 12px; background: var(--brand-soft); border-radius: 12px; padding: 12px 14px;
+    font-size: 13.5px; color: var(--expl-ink);
+  }
+  .flash-expl b { color: var(--brand-dark); }
+
+  .listen-row { display: flex; gap: 10px; justify-content: center; margin: 16px 0; flex-wrap: wrap; }
+  .icon-btn {
+    border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 11px 16px;
+    font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+    color: var(--ink); font-family: inherit;
+  }
+  .icon-btn:active { transform: scale(.96); }
+  .icon-btn.fav.on { color: var(--danger); border-color: #f7c9cb; background: #fdeced; }
+  .icon-btn.speaking { color: var(--brand); border-color: var(--brand); background: var(--brand-soft); }
+
+  .speak-hint {
+    text-align:center; font-size:12.5px; color:var(--muted); background:var(--card);
+    border:1px dashed var(--line); border-radius:12px; padding:10px; margin-bottom:16px;
+  }
+
+  .nav-row { display: flex; gap: 10px; }
+  .nav-row .btn { flex: 1; }
+  .card-counter { text-align: center; color: var(--muted); font-size: 12.5px; margin-bottom: 12px; font-weight: 600; }
+
+  /* Quiz */
+  .quiz-q { background: var(--card); border:1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); margin-bottom: 14px; }
+  .quiz-q .qtext { font-weight: 800; font-size: 16px; margin-bottom: 4px; }
+  .quiz-q .qsub { color: var(--muted); font-size: 12.5px; }
+  .options { display: grid; gap: 10px; margin-bottom: 14px; }
+  .opt {
+    text-align: left; background: var(--card); border: 1.5px solid var(--line); border-radius: 14px;
+    padding: 14px 16px; font-size: 14.5px; cursor: pointer; font-family: inherit; color: var(--ink);
+    transition: border-color .12s, background .12s; font-weight: 600;
+  }
+  .opt:active { transform: scale(.99); }
+  .opt.correct { border-color: var(--accent); background: #e7f7f0; color: #06794f; }
+  .opt.wrong { border-color: var(--danger); background: #fdeced; color: #b4282c; }
+  .opt.disabled { pointer-events: none; opacity: .85; }
+  .explain-box { background: var(--brand-soft); border-radius: 12px; padding: 13px 15px; font-size: 13.5px; margin-bottom: 14px; display:none; }
+  .explain-box.show { display: block; animation: fade .2s ease; }
+
+  /* Roleplay */
+  .rp-card { background: var(--card); border:1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); margin-bottom: 14px; }
+  .rp-prompt { background: linear-gradient(135deg,#4f46e5,#1f6feb); color:#fff; border-radius:14px; padding:16px; margin-bottom:14px; }
+  .rp-prompt .label { color:#cdd9ff; }
+  .rp-prompt .p-ko { font-weight: 800; font-size: 15px; }
+  .rp-prompt .p-en { font-size: 13px; opacity:.9; margin-top:4px; }
+  .bubble { border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; font-size: 14.5px; max-width: 88%; }
+  .bubble.a { background: var(--chip); border-bottom-left-radius: 4px; }
+  .bubble.b { background: var(--brand-soft); margin-left: auto; border-bottom-right-radius: 4px; text-align:right; }
+  .bubble .who { font-size: 10.5px; font-weight: 800; color: var(--muted); display:block; margin-bottom:3px; }
+  .expr-list { list-style:none; padding:0; margin: 6px 0 0; }
+  .expr-list li { padding: 9px 12px; background:var(--card); border:1px solid var(--line); border-radius:10px; margin-bottom:7px; font-weight:600; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .mini-speak { border:none; background:var(--brand-soft); color:var(--brand); border-radius:8px; padding:6px 10px; cursor:pointer; font-size:13px; flex:0 0 auto; }
+
+  /* Completion */
+  .complete-hero { text-align: center; padding: 26px 18px; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border:1px solid var(--line); margin-bottom: 16px; }
+  .complete-hero .emoji { font-size: 52px; }
+  .complete-hero h2 { margin: 8px 0 4px; }
+  .complete-hero p { color: var(--muted); margin: 0; font-size: 14px; }
+  .stat-row { display: flex; gap: 12px; margin-bottom: 16px; }
+  .stat {
+    flex: 1; background: var(--card); border:1px solid var(--line); border-radius: 14px; padding: 16px 10px;
+    text-align: center; box-shadow: var(--shadow);
+  }
+  .stat .big { font-size: 26px; font-weight: 800; color: var(--brand); }
+  .stat .lbl { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+
+  .info-card { background: var(--card); border:1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 14px; }
+  .info-card h3 { margin: 0 0 8px; font-size: 14px; }
+  .info-card p { margin: 0; font-size: 13px; color: var(--muted); }
+  .culture { border-left: 4px solid var(--warn); }
+  .culture h3 { color: #b45309; }
+
+  /* Notice */
+  .notice {
+    background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; border-radius: 12px;
+    padding: 12px 14px; font-size: 12px; margin-bottom: 16px; line-height: 1.5;
+  }
+  .notice b { display:block; margin-bottom:3px; }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(15,23,42,.55); z-index: 80;
+    display: none; align-items: flex-end; justify-content: center;
+  }
+  .modal-backdrop.show { display: flex; animation: fade .2s ease; }
+  .modal {
+    background: var(--card); width: 100%; max-width: 480px; border-radius: 22px 22px 0 0;
+    padding: 24px 20px 30px; box-shadow: 0 -10px 40px rgba(0,0,0,.2);
+    animation: slideUp .28s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%);} to { transform:none;} }
+  .modal .lock-icon { font-size: 40px; text-align:center; }
+  .modal h2 { margin: 8px 0 6px; text-align:center; font-size: 19px; }
+  .modal p { color: var(--muted); font-size: 13.5px; text-align: center; margin: 0 0 16px; }
+  .plan { border:1.5px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+  .plan.featured { border-color: var(--brand); background: var(--brand-soft); }
+  .plan .pname { font-weight: 800; display:flex; justify-content:space-between; align-items:center; }
+  .plan .pname .price { color: var(--brand); }
+  .plan ul { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; color: #475569; }
+  .modal .close-x { display:block; width:100%; margin-top: 8px; }
+
+  /* Bottom nav */
+  .tabbar {
+    position: sticky; bottom: 0; z-index: 25; display: flex;
+    background: var(--chrome); backdrop-filter: blur(8px);
+    border-top: 1px solid var(--line);
+  }
+  .tabbar button {
+    flex: 1; border: none; background: none; padding: 9px 0 10px; cursor: pointer;
+    font-family: inherit; color: var(--muted); font-size: 10.5px; font-weight: 700;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .tabbar button .ic { font-size: 19px; }
+  .tabbar button.active { color: var(--brand); }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
+  footer.foot { text-align: center; color: #9aa3b2; font-size: 11px; padding: 18px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <button class="back-btn" id="backBtn" aria-label="뒤로 / Back">‹</button>
+    <div class="title" id="topTitle">가천 캠퍼스 한국어<small>Gachon Korean-English Campus App</small></div>
+    <span class="progress-pill" id="topProgress">0%</span>
+  </header>
+
+  <main>
+    <!-- HOME -->
+    <section class="screen active" id="screen-home">
+      <div class="hero">
+        <h1 id="heroNameEn">Gachon Korean-English Campus App</h1>
+        <div class="ko-name" id="heroNameKo">가천 한국어-영어 캠퍼스 앱</div>
+        <p id="heroTagline">한국 대학생활에 필요한 한국어를 영어와 함께 쉽고 빠르게 배우세요.</p>
+        <div class="cta-row">
+          <button class="btn btn-light" id="startBtn">시작하기 · Start</button>
+          <button class="btn btn-ghost" style="background:rgba(255,255,255,.18);color:#fff;" id="freeTrialBtn">무료 체험 · Free</button>
+        </div>
+      </div>
+
+      <div class="today-card">
+        <div class="label">오늘의 문장 · Sentence of the Day</div>
+        <div class="today-ko" id="todayKo">—</div>
+        <div class="today-en" id="todayEn">—</div>
+        <div class="today-actions">
+          <button class="icon-btn" id="todayListen">🔊 듣기 · Listen</button>
+          <button class="btn btn-primary" id="todayLearn" style="margin-left:auto;">학습 →</button>
+        </div>
+      </div>
+
+      <div class="today-card">
+        <div class="label">나의 학습 진도 · My Progress</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <strong id="overallText" style="font-size:14px;">0 / 0 문장 학습</strong>
+          <span id="overallPct" style="color:var(--brand);font-weight:800;">0%</span>
+        </div>
+        <div class="bar"><span id="overallBar" style="width:0%"></span></div>
+      </div>
+
+      <div class="section-title">학습 모듈 바로가기 <small>· Modules</small></div>
+      <div class="module-grid" id="homeModules"></div>
+
+      <div class="notice" style="margin-top:18px;">
+        <b>⚠️ 개인정보 안내 · Privacy Notice</b>
+        본 앱은 한국어 학습을 위한 교육용 앱입니다. 여권번호, 외국인등록번호, 주소, 전화번호 등 민감한 개인정보를 입력하지 마세요.<br>
+        This is an educational app. Please do not enter sensitive personal information such as passport, ID, address, or phone numbers.
+      </div>
+      <footer class="foot">v1.1.0 · MVP · 가천대학교 외국인 유학생 대상 · localStorage 기반 진도 저장</footer>
+    </section>
+
+    <!-- MODULES -->
+    <section class="screen" id="screen-modules">
+      <div class="section-title" style="margin-top:4px;">학습 모듈 <small>· 10 Modules</small></div>
+      <div class="module-grid" id="moduleList"></div>
+    </section>
+
+    <!-- CARDS -->
+    <section class="screen" id="screen-cards">
+      <div class="card-counter" id="cardCounter">1 / 5</div>
+      <div class="card-stage">
+        <div class="flashcard" id="flashcard">
+          <div class="flash-situation" id="flashSituation"></div>
+          <div class="flash-ko" id="flashKo"></div>
+          <div class="flash-pron" id="flashPron"></div>
+          <div class="reveal" id="reveal">
+            <div class="flash-en" id="flashEn"></div>
+            <div class="flash-expl" id="flashExpl"></div>
+          </div>
+        </div>
+      </div>
+      <div class="listen-row">
+        <button class="icon-btn" id="cardListen">🔊 듣기 · Listen</button>
+        <button class="icon-btn" id="cardListenSlow">🐢 천천히 · Slow</button>
+        <button class="icon-btn fav" id="cardFav">♡ 즐겨찾기</button>
+      </div>
+      <div class="speak-hint">🎙️ 한국어 문장을 듣고 따라 말해 보세요. <br>Listen, then repeat the Korean sentence aloud.</div>
+      <button class="btn btn-ghost btn-block" id="toggleReveal" style="margin-bottom:10px;">영어 번역·설명 보기 · Show meaning</button>
+      <div class="nav-row">
+        <button class="btn btn-ghost" id="prevCard">← 이전</button>
+        <button class="btn btn-primary" id="nextCard">다음 →</button>
+      </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="screen" id="screen-quiz">
+      <div class="card-counter" id="quizCounter">문제 1 / 5</div>
+      <div class="quiz-q">
+        <div class="qtext" id="quizQ"></div>
+        <div class="qsub" id="quizSub"></div>
+      </div>
+      <div class="options" id="quizOptions"></div>
+      <div class="explain-box" id="quizExplain"></div>
+      <button class="btn btn-primary btn-block" id="quizNext" disabled>다음 문제 →</button>
+    </section>
+
+    <!-- ROLEPLAY -->
+    <section class="screen" id="screen-roleplay">
+      <div class="rp-prompt">
+        <div class="label">역할극 · Role-play</div>
+        <div class="p-ko" id="rpPromptKo"></div>
+        <div class="p-en" id="rpPromptEn"></div>
+      </div>
+      <div class="rp-card">
+        <div class="label">대화 예시 · Sample dialogue</div>
+        <div class="bubble a"><span class="who">A</span><span id="rpA"></span></div>
+        <div class="bubble b"><span class="who">B</span><span id="rpB"></span></div>
+      </div>
+      <div class="rp-card">
+        <div class="label">사용할 표현 · Useful expressions</div>
+        <ul class="expr-list" id="rpExpr"></ul>
+      </div>
+      <div class="info-card" style="background:var(--brand-soft);border-color:#c7d8fb;">
+        <h3>🤖 AI 튜터 확장 예정 · Coming soon</h3>
+        <p>유료 버전에서는 AI 튜터와 실제로 대화하며 발음과 표현을 교정받을 수 있습니다. In the paid version, practice live with an AI tutor that corrects your pronunciation and phrasing.</p>
+      </div>
+      <button class="btn btn-primary btn-block" id="rpToQuiz">퀴즈 풀기 → · Take the quiz</button>
+    </section>
+
+    <!-- COMPLETE -->
+    <section class="screen" id="screen-complete">
+      <div class="complete-hero">
+        <div class="emoji">🎉</div>
+        <h2 id="completeTitle">모듈 완료!</h2>
+        <p id="completeSub">Module complete</p>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="big" id="statSentences">0</div><div class="lbl">학습 문장<br>Sentences</div></div>
+        <div class="stat"><div class="big" id="statQuiz">0/0</div><div class="lbl">맞힌 퀴즈<br>Quiz score</div></div>
+        <div class="stat"><div class="big" id="statPct">0%</div><div class="lbl">전체 진도<br>Overall</div></div>
+      </div>
+      <div class="info-card">
+        <h3>📌 복습 추천 문장 · Review suggestion</h3>
+        <p id="reviewSentence">—</p>
+      </div>
+      <div class="info-card culture">
+        <h3>💡 문화 팁 · Culture tip</h3>
+        <p id="completeCulture">—</p>
+      </div>
+      <div class="info-card" id="nextModuleCard" style="cursor:pointer;">
+        <h3>➡️ 다음 모듈 · Next module</h3>
+        <p id="nextModuleText">—</p>
+      </div>
+      <button class="btn btn-ghost btn-block" id="shareBtn" style="margin-bottom:10px;">📤 결과 공유·저장 · Share</button>
+      <button class="btn btn-primary btn-block" id="backToModules">모듈 목록으로 · All modules</button>
+    </section>
+
+    <!-- FAVORITES -->
+    <section class="screen" id="screen-fav">
+      <div class="section-title" style="margin-top:4px;">즐겨찾기 <small>· Favorites</small></div>
+      <div id="favList"></div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button data-tab="home" class="active"><span class="ic">🏠</span>홈</button>
+    <button data-tab="modules"><span class="ic">📚</span>모듈</button>
+    <button data-tab="fav"><span class="ic">⭐</span>즐겨찾기</button>
+  </nav>
+</div>
+
+<!-- Premium modal -->
+<div class="modal-backdrop" id="premiumModal">
+  <div class="modal">
+    <div class="lock-icon">🔒</div>
+    <h2>프리미엄 콘텐츠 · Premium</h2>
+    <p>이 모듈은 유료 콘텐츠입니다. MVP 데모에서는 미리보기로 모든 모듈을 열어볼 수 있어요.<br>This module is premium. In this MVP demo you can preview all modules.</p>
+    <div class="plan">
+      <div class="pname">Free <span class="price">₩0</span></div>
+      <ul><li>인사 · 수강신청 · 과제 일부</li><li>오늘의 문장 · 샘플 퀴즈</li></ul>
+    </div>
+    <div class="plan">
+      <div class="pname">Basic <span class="price">월 ₩4,900</span></div>
+      <ul><li>전체 10개 모듈 · 복습 기능</li><li>퀴즈 전체 · 학습 진도 저장</li></ul>
+    </div>
+    <div class="plan featured">
+      <div class="pname">Premium <span class="price">월 ₩9,900</span></div>
+      <ul><li>AI 튜터 · 발음 피드백</li><li>역할극 · 수료증 발급</li></ul>
+    </div>
+    <button class="btn btn-primary btn-block" id="previewBtn" style="margin-top:6px;">🔓 데모 미리보기 · Preview now</button>
+    <button class="btn btn-ghost btn-block close-x" id="closeModal">닫기 · Close</button>
+  </div>
+</div>
+
+<script>
+/*
+ * Gachon Korean-English Campus App — Learning Content
+ * 가천 한국어-영어 캠퍼스 앱 — 학습 콘텐츠
+ *
+ * Data structure follows the spec (section 10).
+ * Loaded via <script> so the app works directly from file:// without a server.
+ */
+window.KOLAN_CONTENT = {
+  meta: {
+    app_name_en: "Gachon Korean-English Campus App",
+    app_name_ko: "가천 한국어-영어 캠퍼스 앱",
+    tagline_ko: "한국 대학생활에 필요한 한국어를 영어와 함께 쉽고 빠르게 배우세요.",
+    tagline_en: "Learn the Korean you need for university life in Korea — easily, with English."
+  },
+  modules: [
+    {
+      module_id: 1,
+      module_title_ko: "인사와 자기소개",
+      module_title_en: "Greetings & Self-introduction",
+      level: "beginner",
+      is_free: true,
+      situation: "First day of class, meeting professors and classmates",
+      culture_tip:
+        "In Korea, a polite bow with “안녕하세요” is the standard greeting. Add “잘 부탁드립니다” (literally “please take good care of me”) when you join a new group — it shows humility and is expected from new students.",
+      roleplay: {
+        prompt_ko: "수업 첫날, 옆자리 학생에게 자기소개를 해보세요.",
+        prompt_en: "It's the first day of class. Introduce yourself to the student next to you.",
+        role_a_ko: "학생 A: 안녕하세요. 저는 마리아입니다. 만나서 반갑습니다.",
+        role_b_ko: "학생 B: 안녕하세요. 저는 민준입니다. 어느 학과 학생이에요?",
+        expressions: ["안녕하세요.", "저는 ○○입니다.", "만나서 반갑습니다.", "잘 부탁드립니다."]
+      },
+      sentences: [
+        {
+          sentence_id: "1-1",
+          sentence_ko: "안녕하세요. 저는 마리아입니다.",
+          sentence_en: "Hello. I am Maria.",
+          explanation_en: "The most common polite greeting plus introducing your name. Replace the name with your own.",
+          pronunciation: "an-nyeong-ha-se-yo. jeo-neun ma-ri-a-im-ni-da.",
+          level: "beginner",
+          situation: "Introducing yourself",
+          quiz_question: "What does “저는 ○○입니다” mean?",
+          quiz_options: ["I am ○○", "Where is ○○?", "Thank you, ○○", "See you, ○○"],
+          quiz_answer: "I am ○○",
+          is_free: true
+        },
+        {
+          sentence_id: "1-2",
+          sentence_ko: "저는 컴퓨터공학과 학생입니다.",
+          sentence_en: "I am a student in the Computer Science department.",
+          explanation_en: "Use “○○학과 학생입니다” to say which department you belong to.",
+          pronunciation: "jeo-neun keom-pyu-teo-gong-hak-gwa hak-saeng-im-ni-da.",
+          level: "beginner",
+          situation: "Saying your major",
+          quiz_question: "What does “학과” mean?",
+          quiz_options: ["department", "homework", "library", "professor"],
+          quiz_answer: "department",
+          is_free: true
+        },
+        {
+          sentence_id: "1-3",
+          sentence_ko: "만나서 반갑습니다.",
+          sentence_en: "Nice to meet you.",
+          explanation_en: "A standard polite phrase used when meeting someone for the first time.",
+          pronunciation: "man-na-seo ban-gap-seum-ni-da.",
+          level: "beginner",
+          situation: "Meeting someone new",
+          quiz_question: "When do you say “만나서 반갑습니다”?",
+          quiz_options: ["When meeting someone new", "When leaving class", "When asking for help", "When apologizing"],
+          quiz_answer: "When meeting someone new",
+          is_free: true
+        },
+        {
+          sentence_id: "1-4",
+          sentence_ko: "잘 부탁드립니다.",
+          sentence_en: "I look forward to working with you. (Please take good care of me.)",
+          explanation_en: "Said when joining a new group, class, or team. It politely asks others for their kindness and cooperation.",
+          pronunciation: "jal bu-tak-deu-rim-ni-da.",
+          level: "beginner",
+          situation: "Joining a new group",
+          quiz_question: "“잘 부탁드립니다” is mainly used to ___.",
+          quiz_options: ["politely ask for others' cooperation", "order food", "ask for directions", "say goodbye forever"],
+          quiz_answer: "politely ask for others' cooperation",
+          is_free: true
+        },
+        {
+          sentence_id: "1-5",
+          sentence_ko: "저는 외국인 유학생입니다.",
+          sentence_en: "I am an international student.",
+          explanation_en: "Use this to explain that you are an international student, for example when asking for help.",
+          pronunciation: "jeo-neun oe-gug-in yu-hak-saeng-im-ni-da.",
+          level: "beginner",
+          situation: "Explaining you are an international student",
+          quiz_question: "What does “유학생” mean?",
+          quiz_options: ["international/exchange student", "graduate", "teacher", "freshman only"],
+          quiz_answer: "international/exchange student",
+          is_free: true
+        }
+      ]
+    },
+    {
+      module_id: 2,
+      module_title_ko: "수강신청",
+      module_title_en: "Course Registration",
+      level: "beginner",
+      is_free: true,
+      situation: "Registering for classes, asking about credits and timetables",
+      culture_tip:
+        "Course registration (수강신청) in Korea is often first-come, first-served and can fill up within seconds. Know your registration time slot in advance and prepare a backup course list.",
+      roleplay: {
+        prompt_ko: "행정실에서 수강신청 기간에 대해 물어보세요.",
+        prompt_en: "Ask the administrative office about the course registration period.",
+        role_a_ko: "학생: 수강신청 기간이 언제입니까?",
+        role_b_ko: "직원: 다음 주 월요일부터 수요일까지입니다.",
+        expressions: ["수강신청 기간이 언제입니까?", "이 수업을 신청하고 싶습니다.", "수강정정은 어디에서 합니까?"]
+      },
+      sentences: [
+        {
+          sentence_id: "2-1",
+          sentence_ko: "이 수업을 신청하고 싶습니다.",
+          sentence_en: "I would like to register for this class.",
+          explanation_en: "Use “-고 싶습니다” to politely express what you want to do.",
+          pronunciation: "i su-eob-eul sin-cheong-ha-go sip-seum-ni-da.",
+          level: "beginner",
+          situation: "Asking to register for a class",
+          quiz_question: "“-고 싶습니다” is used to express ___.",
+          quiz_options: ["what you want to do", "a past event", "an order", "a question only"],
+          quiz_answer: "what you want to do",
+          is_free: true
+        },
+        {
+          sentence_id: "2-2",
+          sentence_ko: "수강신청 기간이 언제입니까?",
+          sentence_en: "When is the course registration period?",
+          explanation_en: "“언제입니까?” means “when is it?” — useful for asking about any date or period.",
+          pronunciation: "su-gang-sin-cheong gi-gan-i eon-je-im-ni-kka?",
+          level: "beginner",
+          situation: "Asking about the registration period",
+          quiz_question: "What does “언제입니까?” mean?",
+          quiz_options: ["When is it?", "Where is it?", "How much is it?", "Who is it?"],
+          quiz_answer: "When is it?",
+          is_free: true
+        },
+        {
+          sentence_id: "2-3",
+          sentence_ko: "이 과목은 몇 학점입니까?",
+          sentence_en: "How many credits is this course?",
+          explanation_en: "“학점” means academic credits. “몇” means “how many”.",
+          pronunciation: "i gwa-mok-eun myeot hak-jeom-im-ni-kka?",
+          level: "beginner",
+          situation: "Asking about credits",
+          quiz_question: "What does “학점” mean?",
+          quiz_options: ["academic credits", "classroom", "grade report", "tuition"],
+          quiz_answer: "academic credits",
+          is_free: false
+        },
+        {
+          sentence_id: "2-4",
+          sentence_ko: "시간표를 변경할 수 있습니까?",
+          sentence_en: "Can I change my timetable?",
+          explanation_en: "“-ㄹ 수 있습니까?” asks whether something is possible.",
+          pronunciation: "si-gan-pyo-reul byeon-gyeong-hal su it-seum-ni-kka?",
+          level: "beginner",
+          situation: "Asking to change a timetable",
+          quiz_question: "What does “시간표” mean?",
+          quiz_options: ["timetable/schedule", "credit", "exam", "tuition"],
+          quiz_answer: "timetable/schedule",
+          is_free: false
+        },
+        {
+          sentence_id: "2-5",
+          sentence_ko: "수강정정은 어디에서 합니까?",
+          sentence_en: "Where do I make course changes (add/drop)?",
+          explanation_en: "“수강정정” is the add/drop correction period. “어디에서” means “where”.",
+          pronunciation: "su-gang-jeong-jeong-eun eo-di-e-seo ham-ni-kka?",
+          level: "intermediate",
+          situation: "Asking where to add/drop courses",
+          quiz_question: "“어디에서” means ___.",
+          quiz_options: ["where", "when", "why", "who"],
+          quiz_answer: "where",
+          is_free: false
+        }
+      ]
+    },
+    {
+      module_id: 3,
+      module_title_ko: "출석과 지각",
+      module_title_en: "Attendance & Lateness",
+      level: "beginner",
+      is_free: false,
+      situation: "Explaining attendance, lateness, and absence politely",
+      culture_tip:
+        "Attendance often counts toward your grade in Korean universities. If you must miss class, email your professor in advance and submit an absence note (결석계) with documentation when required.",
+      roleplay: {
+        prompt_ko: "수업에 늦게 도착해 교수님께 양해를 구하세요.",
+        prompt_en: "You arrived late. Politely apologize to your professor.",
+        role_a_ko: "학생: 교수님, 죄송합니다. 제가 조금 늦었습니다.",
+        role_b_ko: "교수: 괜찮아요. 자리에 앉으세요.",
+        expressions: ["제가 조금 늦었습니다.", "몸이 아파서 결석했습니다.", "결석계를 제출해야 합니까?"]
+      },
+      sentences: [
+        {
+          sentence_id: "3-1",
+          sentence_ko: "오늘 출석 확인을 했습니까?",
+          sentence_en: "Did you take attendance today?",
+          explanation_en: "“출석 확인” means checking/taking attendance.",
+          pronunciation: "o-neul chul-seok hwag-in-eul haet-seum-ni-kka?",
+          level: "beginner",
+          situation: "Asking about attendance check",
+          quiz_question: "What does “출석” mean?",
+          quiz_options: ["attendance", "absence", "homework", "exam"],
+          quiz_answer: "attendance",
+          is_free: false
+        },
+        {
+          sentence_id: "3-2",
+          sentence_ko: "제가 조금 늦었습니다.",
+          sentence_en: "I am a little late.",
+          explanation_en: "A polite way to acknowledge that you arrived late.",
+          pronunciation: "je-ga jo-geum neu-jeot-seum-ni-da.",
+          level: "beginner",
+          situation: "Arriving late",
+          quiz_question: "“늦었습니다” means ___.",
+          quiz_options: ["I am late", "I am early", "I am here", "I am sick"],
+          quiz_answer: "I am late",
+          is_free: false
+        },
+        {
+          sentence_id: "3-3",
+          sentence_ko: "몸이 아파서 결석했습니다.",
+          sentence_en: "I was absent because I was sick.",
+          explanation_en: "“-아서/어서” gives a reason. “결석” means absence.",
+          pronunciation: "mom-i a-pa-seo gyeol-seok-haet-seum-ni-da.",
+          level: "intermediate",
+          situation: "Explaining an absence",
+          quiz_question: "What does “결석” mean?",
+          quiz_options: ["absence", "attendance", "lateness", "leave early"],
+          quiz_answer: "absence",
+          is_free: false
+        },
+        {
+          sentence_id: "3-4",
+          sentence_ko: "결석계를 제출해야 합니까?",
+          sentence_en: "Do I need to submit an absence note?",
+          explanation_en: "“-해야 합니까?” asks whether you must do something. “결석계” is an official absence note.",
+          pronunciation: "gyeol-seok-gye-reul je-chul-hae-ya ham-ni-kka?",
+          level: "intermediate",
+          situation: "Asking about an absence note",
+          quiz_question: "“-해야 합니까?” asks about ___.",
+          quiz_options: ["obligation (must I?)", "the past", "preference", "location"],
+          quiz_answer: "obligation (must I?)",
+          is_free: false
+        },
+        {
+          sentence_id: "3-5",
+          sentence_ko: "출석 점수는 어떻게 반영됩니까?",
+          sentence_en: "How is the attendance score reflected (in the grade)?",
+          explanation_en: "“어떻게” means “how”. “반영되다” means “to be reflected/counted”.",
+          pronunciation: "chul-seok jeom-su-neun eo-tteo-ke ban-yeong-doem-ni-kka?",
+          level: "intermediate",
+          situation: "Asking how attendance affects grades",
+          quiz_question: "What does “어떻게” mean?",
+          quiz_options: ["how", "when", "where", "what"],
+          quiz_answer: "how",
+          is_free: false
+        }
+      ]
+    },
+    {
+      module_id: 4,
+      module_title_ko: "과제 제출",
+      module_title_en: "Assignment Submission",
+      level: "beginner",
+      is_free: true,
+      situation: "Asking about assignment content, deadlines, and submission",
+      culture_tip:
+        "Many courses use an LMS such as Cyber Campus to submit assignments. Check the accepted file format and submit before the deadline — late submissions are often penalized automatically.",
+      roleplay: {
+        prompt_ko: "조교에게 과제 제출 방법을 물어보세요.",
+        prompt_en: "Ask the teaching assistant how to submit the assignment.",
+        role_a_ko: "학생: 과제를 어디에 제출하면 됩니까?",
+        role_b_ko: "조교: 사이버캠퍼스에 PDF 파일로 올리면 됩니다.",
+        expressions: ["과제 제출 기한이 언제입니까?", "과제를 어디에 제출하면 됩니까?", "파일 형식은 무엇입니까?"]
+      },
+      sentences: [
+        {
+          sentence_id: "4-1",
+          sentence_ko: "과제 제출 기한이 언제입니까?",
+          sentence_en: "When is the assignment deadline?",
+          explanation_en: "Use this sentence when you want to politely ask your professor or teaching assistant about the deadline for an assignment.",
+          pronunciation: "gwa-je je-chul gi-han-i eon-je-im-ni-kka?",
+          level: "beginner",
+          situation: "Asking about an assignment deadline",
+          quiz_question: "What does “과제 제출 기한” mean?",
+          quiz_options: ["assignment deadline", "exam date", "class time", "tuition fee"],
+          quiz_answer: "assignment deadline",
+          is_free: true
+        },
+        {
+          sentence_id: "4-2",
+          sentence_ko: "과제를 어디에 제출하면 됩니까?",
+          sentence_en: "Where should I submit the assignment?",
+          explanation_en: "“-하면 됩니까?” politely asks what is the correct way to do something.",
+          pronunciation: "gwa-je-reul eo-di-e je-chul-ha-myeon doem-ni-kka?",
+          level: "beginner",
+          situation: "Asking where to submit",
+          quiz_question: "What does “제출” mean?",
+          quiz_options: ["submission", "attendance", "deadline", "grade"],
+          quiz_answer: "submission",
+          is_free: true
+        },
+        {
+          sentence_id: "4-3",
+          sentence_ko: "파일 형식은 무엇입니까?",
+          sentence_en: "What is the file format?",
+          explanation_en: "“무엇입니까?” means “what is it?”. Use it to ask about required formats.",
+          pronunciation: "pa-il hyeong-sik-eun mu-eos-im-ni-kka?",
+          level: "beginner",
+          situation: "Asking about file format",
+          quiz_question: "“무엇입니까?” means ___.",
+          quiz_options: ["What is it?", "Where is it?", "When is it?", "Who is it?"],
+          quiz_answer: "What is it?",
+          is_free: false
+        },
+        {
+          sentence_id: "4-4",
+          sentence_ko: "제출이 조금 늦어질 것 같습니다.",
+          sentence_en: "I think my submission will be a little late.",
+          explanation_en: "“-ㄹ 것 같습니다” softly expresses a guess or expectation. Polite for warning about a delay.",
+          pronunciation: "je-chul-i jo-geum neu-jeo-jil geot gat-seum-ni-da.",
+          level: "intermediate",
+          situation: "Warning about a late submission",
+          quiz_question: "“-ㄹ 것 같습니다” expresses ___.",
+          quiz_options: ["a guess/expectation", "a command", "a finished action", "a greeting"],
+          quiz_answer: "a guess/expectation",
+          is_free: false
+        },
+        {
+          sentence_id: "4-5",
+          sentence_ko: "참고문헌은 어떻게 작성하면 됩니까?",
+          sentence_en: "How should I write the references?",
+          explanation_en: "“참고문헌” means references/bibliography. Useful for reports and papers.",
+          pronunciation: "cham-go-mun-heon-eun eo-tteo-ke jak-seong-ha-myeon doem-ni-kka?",
+          level: "intermediate",
+          situation: "Asking how to write references",
+          quiz_question: "What does “참고문헌” mean?",
+          quiz_options: ["references/bibliography", "deadline", "attendance", "title page"],
+          quiz_answer: "references/bibliography",
+          is_free: false
+        }
+      ]
+    },
+    {
+      module_id: 5,
+      module_title_ko: "교수님께 이메일 쓰기",
+      module_title_en: "Writing an Email to a Professor",
+      level: "intermediate",
+      is_free: false,
+      situation: "Writing a polite email to a professor",
+      culture_tip:
+        "Always begin a professor email with “교수님, 안녕하세요”, state your course and name, keep it short and polite, and close with “감사합니다”. Avoid casual abbreviations.",
+      roleplay: {
+        prompt_ko: "교수님께 과제 질문 이메일을 쓰는 연습을 하세요.",
+        prompt_en: "Practice writing an email to your professor with a question about an assignment.",
+        role_a_ko: "학생: 교수님, 안녕하세요. 저는 한국어1 수업을 듣는 마리아입니다.",
+        role_b_ko: "교수: 네, 마리아 학생. 무엇이 궁금한가요?",
+        expressions: ["교수님, 안녕하세요.", "질문이 있어 이메일을 드립니다.", "확인해 주시면 감사하겠습니다."]
+      },
+      sentences: [
+        {
+          sentence_id: "5-1",
+          sentence_ko: "교수님, 안녕하세요.",
+          sentence_en: "Hello, Professor.",
+          explanation_en: "The standard polite opening for an email or conversation with a professor.",
+          pronunciation: "gyo-su-nim, an-nyeong-ha-se-yo.",
+          level: "beginner",
+          situation: "Opening an email",
+          quiz_question: "What does “교수님” mean?",
+          quiz_options: ["professor", "classmate", "staff", "senior student"],
+          quiz_answer: "professor",
+          is_free: false
+        },
+        {
+          sentence_id: "5-2",
+          sentence_ko: "저는 ○○수업을 듣는 학생입니다.",
+          sentence_en: "I am a student taking your ○○ class.",
+          explanation_en: "“수업을 듣다” means “to take a class”. This identifies which class you are in.",
+          pronunciation: "jeo-neun ○○-su-eob-eul deut-neun hak-saeng-im-ni-da.",
+          level: "intermediate",
+          situation: "Identifying your class",
+          quiz_question: "“수업을 듣다” means ___.",
+          quiz_options: ["to take a class", "to skip a class", "to teach a class", "to cancel a class"],
+          quiz_answer: "to take a class",
+          is_free: false
+        },
+        {
+          sentence_id: "5-3",
+          sentence_ko: "질문이 있어 이메일을 드립니다.",
+          sentence_en: "I am writing this email because I have a question.",
+          explanation_en: "“이메일을 드리다” is a humble/polite way to say “I am sending you an email”.",
+          pronunciation: "jil-mun-i it-seo i-me-il-eul deu-rim-ni-da.",
+          level: "intermediate",
+          situation: "Stating the purpose of the email",
+          quiz_question: "What does “질문” mean?",
+          quiz_options: ["question", "answer", "grade", "deadline"],
+          quiz_answer: "question",
+          is_free: false
+        },
+        {
+          sentence_id: "5-4",
+          sentence_ko: "확인해 주시면 감사하겠습니다.",
+          sentence_en: "I would be grateful if you could check this.",
+          explanation_en: "A very polite request. “-주시면 감사하겠습니다” is common in formal Korean emails.",
+          pronunciation: "hwag-in-hae ju-si-myeon gam-sa-ha-get-seum-ni-da.",
+          level: "intermediate",
+          situation: "Politely requesting a reply",
+          quiz_question: "“-주시면 감사하겠습니다” is used to ___.",
+          quiz_options: ["politely make a request", "give an order", "apologize", "say goodbye to a friend"],
+          quiz_answer: "politely make a request",
+          is_free: false
+        },
+        {
+          sentence_id: "5-5",
+          sentence_ko: "감사합니다.",
+          sentence_en: "Thank you.",
+          explanation_en: "The standard polite closing for emails and conversations.",
+          pronunciation: "gam-sa-ham-ni-da.",
+          level: "beginner",
+          situation: "Closing an email",
+          quiz_question: "What does “감사합니다” mean?",
+          quiz_options: ["Thank you", "Sorry", "Hello", "Goodbye"],
+          quiz_answer: "Thank you",
+          is_free: false
+        }
+      ]
+    },
+    {
+      module_id: 6,
+      module_title_ko: "발표와 토론",
+      module_title_en: "Presentations & Discussion",
+      level: "intermediate",
+      is_free: false,
+      situation: "Giving a presentation, sharing opinions, answering questions",
+      culture_tip:
+        "Presentations (발표) are common and often graded. Open with “지금부터 발표를 시작하겠습니다” and close with “이상으로 발표를 마치겠습니다” — these set phrases signal structure and sound professional.",
+      roleplay: {
+        prompt_ko: "조별 발표를 시작하고 마무리하는 연습을 하세요.",
+        prompt_en: "Practice starting and ending a group presentation.",
+        role_a_ko: "발표자: 지금부터 발표를 시작하겠습니다.",
+        role_b_ko: "청중: 네, 잘 듣겠습니다.",
+        expressions: ["지금부터 발표를 시작하겠습니다.", "제 의견은 다음과 같습니다.", "이상으로 발표를 마치겠습니다."]
+      },
+      sentences: [
+        {
+          sentence_id: "6-1",
+          sentence_ko: "지금부터 발표를 시작하겠습니다.",
+          sentence_en: "I will now begin my presentation.",
+          explanation_en: "A formal opening phrase for a presentation. “-겠습니다” shows polite intention.",
+          pronunciation: "ji-geum-bu-teo bal-pyo-reul si-jak-ha-get-seum-ni-da.",
+          level: "intermediate",
+          situation: "Starting a presentation",
+          quiz_question: "What does “발표” mean?",
+          quiz_options: ["presentation", "discussion only", "exam", "homework"],
+          quiz_answer: "presentation",
+          is_free: false
+        },
+        {
+          sentence_id: "6-2",
+          sentence_ko: "제 의견은 다음과 같습니다.",
+          sentence_en: "My opinion is as follows.",
+          explanation_en: "Use this to introduce your point in a discussion or presentation.",
+          pronunciation: "je ui-gyeon-eun da-eum-gwa gat-seum-ni-da.",
+          level: "intermediate",
+          situation: "Stating your opinion",
+          quiz_question: "What does “의견” mean?",
+          quiz_options: ["opinion", "question", "answer", "topic"],
+          quiz_answer: "opinion",
+          is_free: false
+        },
+        {
+          sentence_id: "6-3",
+          sentence_ko: "질문해 주셔서 감사합니다.",
+          sentence_en: "Thank you for your question.",
+          explanation_en: "A polite response when an audience member asks you a question.",
+          pronunciation: "jil-mun-hae ju-syeo-seo gam-sa-ham-ni-da.",
+          level: "intermediate",
+          situation: "Responding to a question",
+          quiz_question: "When do you say “질문해 주셔서 감사합니다”?",
+          quiz_options: ["After someone asks you a question", "Before class starts", "When submitting homework", "When you are late"],
+          quiz_answer: "After someone asks you a question",
+          is_free: false
+        },
+        {
+          sentence_id: "6-4",
+          sentence_ko: "다시 설명드리겠습니다.",
+          sentence_en: "Let me explain again.",
+          explanation_en: "Use this when you want to re-explain something more clearly.",
+          pronunciation: "da-si seol-myeong-deu-ri-get-seum-ni-da.",
+          level: "intermediate",
+          situation: "Re-explaining a point",
+          quiz_question: "“다시” means ___.",
+          quiz_options: ["again", "now", "slowly", "first"],
+          quiz_answer: "again",
+          is_free: false
+        },
+        {
+          sentence_id: "6-5",
+          sentence_ko: "이상으로 발표를 마치겠습니다.",
+          sentence_en: "This concludes my presentation.",
+          explanation_en: "The standard formal closing phrase for a presentation.",
+          pronunciation: "i-sang-eu-ro bal-pyo-reul ma-chi-get-seum-ni-da.",
+          level: "intermediate",
+          situation: "Ending a presentation",
+          quiz_question: "“마치겠습니다” means ___.",
+          quiz_options: ["I will finish/conclude", "I will start", "I will ask", "I will repeat"],
+          quiz_answer: "I will finish/conclude",
+          is_free: false
+        }
+      ]
+    },
+    {
+      module_id: 7,
+      module_title_ko: "조별과제",
+      module_title_en: "Group Projects",
+      level: "intermediate",
+      is_free: false,
+      situation: "Dividing roles and scheduling meetings for group work",
+      culture_tip:
+        "Group projects (조별과제) are very common. Decide roles early, exchange contact info (often via KakaoTalk), and share files in a common drive. Volunteering with “제가 ○○을 맡겠습니다” is appreciated.",
+      roleplay: {
+        prompt_ko: "조별과제 첫 회의에서 역할을 나누세요.",
+        prompt_en: "Divide roles at the first group project meeting.",
+        role_a_ko: "조원 A: 제가 발표를 맡겠습니다.",
+        role_b_ko: "조원 B: 그럼 저는 자료 조사를 하겠습니다.",
+        expressions: ["우리 조의 주제는 무엇입니까?", "회의는 언제 할까요?", "제가 발표를 맡겠습니다."]
+      },
+      sentences: [
+        {
+          sentence_id: "7-1",
+          sentence_ko: "우리 조의 주제는 무엇입니까?",
+          sentence_en: "What is our group's topic?",
+          explanation_en: "“조” means group/team. “주제” means topic.",
+          pronunciation: "u-ri jo-ui ju-je-neun mu-eos-im-ni-kka?",
+          level: "intermediate",
+          situation: "Asking about the group topic",
+          quiz_question: "What does “주제” mean?",
+          quiz_options: ["topic", "group", "role", "meeting"],
+          quiz_answer: "topic",
+          is_free: false
+        },
+        {
+          sentence_id: "7-2",
+          sentence_ko: "제 역할은 무엇입니까?",
+          sentence_en: "What is my role?",
+          explanation_en: "“역할” means role. Use this to ask what part you should take.",
+          pronunciation: "je yeok-hal-eun mu-eos-im-ni-kka?",
+          level: "beginner",
+          situation: "Asking about your role",
+          quiz_question: "What does “역할” mean?",
+          quiz_options: ["role", "topic", "schedule", "file"],
+          quiz_answer: "role",
+          is_free: false
+        },
+        {
+          sentence_id: "7-3",
+          sentence_ko: "회의는 언제 할까요?",
+          sentence_en: "When shall we have the meeting?",
+          explanation_en: "“-ㄹ까요?” politely suggests or asks for a group decision. “회의” means meeting.",
+          pronunciation: "hoe-ui-neun eon-je hal-kka-yo?",
+          level: "intermediate",
+          situation: "Scheduling a meeting",
+          quiz_question: "“회의” means ___.",
+          quiz_options: ["meeting", "topic", "exam", "role"],
+          quiz_answer: "meeting",
+          is_free: false
+        },
+        {
+          sentence_id: "7-4",
+          sentence_ko: "자료를 공유해 주세요.",
+          sentence_en: "Please share the materials.",
+          explanation_en: "“공유하다” means to share. “-아/어 주세요” is a polite request.",
+          pronunciation: "ja-ryo-reul gong-yu-hae ju-se-yo.",
+          level: "intermediate",
+          situation: "Asking to share files",
+          quiz_question: "What does “자료” mean?",
+          quiz_options: ["materials/data", "role", "meeting", "topic"],
+          quiz_answer: "materials/data",
+          is_free: false
+        },
+        {
+          sentence_id: "7-5",
+          sentence_ko: "제가 발표를 맡겠습니다.",
+          sentence_en: "I will take charge of the presentation.",
+          explanation_en: "“맡다” means to take charge of / be responsible for a task.",
+          pronunciation: "je-ga bal-pyo-reul mat-get-seum-ni-da.",
+          level: "intermediate",
+          situation: "Volunteering for a task",
+          quiz_question: "“맡겠습니다” means ___.",
+          quiz_options: ["I will take charge", "I will quit", "I will ask", "I will be late"],
+          quiz_answer: "I will take charge",
+          is_free: false
+        }
+      ]
+    },
+    {
+      module_id: 8,
+      module_title_ko: "도서관과 행정실 이용",
+      module_title_en: "Library & Administrative Office",
+      level: "beginner",
+      is_free: false,
+      situation: "Asking for documents and services at the library and office",
+      culture_tip:
+        "You'll often need certificates (증명서) such as enrollment or transcript documents from the administrative office, and a student ID (학생증) doubles as a library card. Many can also be issued from self-service kiosks.",
+      roleplay: {
+        prompt_ko: "행정실에서 증명서 발급을 문의하세요.",
+        prompt_en: "Ask the administrative office about issuing a certificate.",
+        role_a_ko: "학생: 증명서를 발급받을 수 있습니까?",
+        role_b_ko: "직원: 네, 무인 발급기를 이용하시면 됩니다.",
+        expressions: ["학생증을 발급받고 싶습니다.", "증명서를 발급받을 수 있습니까?", "책을 대출하고 싶습니다."]
+      },
+      sentences: [
+        {
+          sentence_id: "8-1",
+          sentence_ko: "학생증을 발급받고 싶습니다.",
+          sentence_en: "I would like to get a student ID card.",
+          explanation_en: "“학생증” is your student ID card. “발급받다” means to be issued (a document/card).",
+          pronunciation: "hak-saeng-jeung-eul bal-geup-bat-go sip-seum-ni-da.",
+          level: "beginner",
+          situation: "Requesting a student ID",
+          quiz_question: "What does “학생증” mean?",
+          quiz_options: ["student ID card", "certificate", "library book", "timetable"],
+          quiz_answer: "student ID card",
+          is_free: false
+        },
+        {
+          sentence_id: "8-2",
+          sentence_ko: "증명서를 발급받을 수 있습니까?",
+          sentence_en: "Can I get a certificate issued?",
+          explanation_en: "“증명서” means an official certificate (e.g., enrollment, transcript).",
+          pronunciation: "jeung-myeong-seo-reul bal-geup-bat-eul su it-seum-ni-kka?",
+          level: "intermediate",
+          situation: "Requesting a certificate",
+          quiz_question: "What does “증명서” mean?",
+          quiz_options: ["certificate", "student ID", "library", "deadline"],
+          quiz_answer: "certificate",
+          is_free: false
+        },
+        {
+          sentence_id: "8-3",
+          sentence_ko: "도서관 이용 시간은 언제입니까?",
+          sentence_en: "What are the library opening hours?",
+          explanation_en: "“이용 시간” means hours of use/operation. “도서관” means library.",
+          pronunciation: "do-seo-gwan i-yong si-gan-eun eon-je-im-ni-kka?",
+          level: "beginner",
+          situation: "Asking library hours",
+          quiz_question: "What does “도서관” mean?",
+          quiz_options: ["library", "office", "dormitory", "cafeteria"],
+          quiz_answer: "library",
+          is_free: false
+        },
+        {
+          sentence_id: "8-4",
+          sentence_ko: "책을 대출하고 싶습니다.",
+          sentence_en: "I would like to borrow a book.",
+          explanation_en: "“대출하다” means to borrow/check out (a book or money).",
+          pronunciation: "chaeg-eul dae-chul-ha-go sip-seum-ni-da.",
+          level: "beginner",
+          situation: "Borrowing a book",
+          quiz_question: "What does “대출” mean?",
+          quiz_options: ["borrowing/checkout", "returning", "buying", "reading room"],
+          quiz_answer: "borrowing/checkout",
+          is_free: false
+        },
+        {
+          sentence_id: "8-5",
+          sentence_ko: "어디에서 문의하면 됩니까?",
+          sentence_en: "Where should I ask (make an inquiry)?",
+          explanation_en: "“문의하다” means to inquire. A useful general phrase for asking where to go.",
+          pronunciation: "eo-di-e-seo mun-ui-ha-myeon doem-ni-kka?",
+          level: "beginner",
+          situation: "Asking where to inquire",
+          quiz_question: "What does “문의” mean?",
+          quiz_options: ["inquiry", "certificate", "book", "ID card"],
+          quiz_answer: "inquiry",
+          is_free: false
+        }
+      ]
+    },
+    {
+      module_id: 9,
+      module_title_ko: "가천대학교 이해",
+      module_title_en: "Understanding Gachon University",
+      level: "beginner",
+      is_free: false,
+      situation: "Understanding the university's history, campus, and vision",
+      culture_tip:
+        "Gachon University (가천대학교) was formed through university mergers and is known for its medical, IT, and AI programs. Knowing a little about your school's history and vision helps you connect with campus life.",
+      roleplay: {
+        prompt_ko: "친구에게 가천대학교를 소개하세요.",
+        prompt_en: "Introduce Gachon University to a friend.",
+        role_a_ko: "친구: 가천대학교는 어떤 대학입니까?",
+        role_b_ko: "나: 가천대학교는 의학과 AI로 유명한 대학입니다.",
+        expressions: ["가천대학교는 어떤 대학입니까?", "가천대학교의 비전은 무엇입니까?", "저는 가천대학교 학생입니다."]
+      },
+      sentences: [
+        {
+          sentence_id: "9-1",
+          sentence_ko: "가천대학교는 어떤 대학입니까?",
+          sentence_en: "What kind of university is Gachon University?",
+          explanation_en: "“어떤” means “what kind of”. Use it to ask about characteristics.",
+          pronunciation: "ga-cheon-dae-hak-gyo-neun eo-tteon dae-hag-im-ni-kka?",
+          level: "beginner",
+          situation: "Asking about the university",
+          quiz_question: "What does “어떤” mean?",
+          quiz_options: ["what kind of", "how many", "where", "when"],
+          quiz_answer: "what kind of",
+          is_free: false
+        },
+        {
+          sentence_id: "9-2",
+          sentence_ko: "이길여 총장님은 어떤 분입니까?",
+          sentence_en: "Who is Chancellor Lee Gil-ya?",
+          explanation_en: "“총장” means university chancellor/president. “분” is a polite counter for a person.",
+          pronunciation: "i-gil-yeo chong-jang-nim-eun eo-tteon bun-im-ni-kka?",
+          level: "intermediate",
+          situation: "Asking about the chancellor",
+          quiz_question: "What does “총장” mean?",
+          quiz_options: ["university chancellor/president", "professor", "department head", "classmate"],
+          quiz_answer: "university chancellor/president",
+          is_free: false
+        },
+        {
+          sentence_id: "9-3",
+          sentence_ko: "가천대학교의 비전은 무엇입니까?",
+          sentence_en: "What is Gachon University's vision?",
+          explanation_en: "“비전” (vision) is borrowed from English and used in university mottos.",
+          pronunciation: "ga-cheon-dae-hak-gyo-ui bi-jeon-eun mu-eos-im-ni-kka?",
+          level: "intermediate",
+          situation: "Asking about the vision",
+          quiz_question: "What does “비전” mean?",
+          quiz_options: ["vision", "history", "campus", "tuition"],
+          quiz_answer: "vision",
+          is_free: false
+        },
+        {
+          sentence_id: "9-4",
+          sentence_ko: "학교의 주요 시설은 어디에 있습니까?",
+          sentence_en: "Where are the main facilities of the school?",
+          explanation_en: "“시설” means facilities. “주요” means main/major.",
+          pronunciation: "hak-gyo-ui ju-yo si-seol-eun eo-di-e it-seum-ni-kka?",
+          level: "intermediate",
+          situation: "Asking about facilities",
+          quiz_question: "What does “시설” mean?",
+          quiz_options: ["facilities", "history", "vision", "schedule"],
+          quiz_answer: "facilities",
+          is_free: false
+        },
+        {
+          sentence_id: "9-5",
+          sentence_ko: "저는 가천대학교 학생입니다.",
+          sentence_en: "I am a Gachon University student.",
+          explanation_en: "A simple, useful sentence to state which university you attend.",
+          pronunciation: "jeo-neun ga-cheon-dae-hak-gyo hak-saeng-im-ni-da.",
+          level: "beginner",
+          situation: "Saying which university you attend",
+          quiz_question: "How do you say “I am a Gachon University student”?",
+          quiz_options: [
+            "저는 가천대학교 학생입니다.",
+            "가천대학교는 어떤 대학입니까?",
+            "학교의 시설은 어디에 있습니까?",
+            "감사합니다."
+          ],
+          quiz_answer: "저는 가천대학교 학생입니다.",
+          is_free: false
+        }
+      ]
+    },
+    {
+      module_id: 10,
+      module_title_ko: "AI Vision과 미래 학습",
+      module_title_en: "AI Vision & Future Learning",
+      level: "intermediate",
+      is_free: false,
+      situation: "Talking about AI, self-directed learning, and your career",
+      culture_tip:
+        "Korean universities increasingly emphasize AI literacy and self-directed learning (자기주도 학습). Being able to talk about how you use AI tools and prepare for your career is a real advantage.",
+      roleplay: {
+        prompt_ko: "진로 상담에서 AI 활용 계획을 이야기하세요.",
+        prompt_en: "Talk about your plan to use AI during a career counseling session.",
+        role_a_ko: "상담사: 앞으로 어떻게 공부할 계획인가요?",
+        role_b_ko: "학생: 저는 AI를 활용해 공부하고 있습니다.",
+        expressions: ["저는 AI를 활용해 공부하고 있습니다.", "대학에서 AI 활용 능력은 중요합니다.", "저는 새로운 기술을 배우고 싶습니다."]
+      },
+      sentences: [
+        {
+          sentence_id: "10-1",
+          sentence_ko: "저는 AI를 활용해 공부하고 있습니다.",
+          sentence_en: "I am studying using AI.",
+          explanation_en: "“활용하다” means to use/utilize. “-고 있습니다” shows an ongoing action.",
+          pronunciation: "jeo-neun AI-reul hwal-yong-hae gong-bu-ha-go it-seum-ni-da.",
+          level: "intermediate",
+          situation: "Talking about how you study",
+          quiz_question: "What does “활용하다” mean?",
+          quiz_options: ["to use/utilize", "to forget", "to teach", "to finish"],
+          quiz_answer: "to use/utilize",
+          is_free: false
+        },
+        {
+          sentence_id: "10-2",
+          sentence_ko: "AI는 학습을 도와줄 수 있습니다.",
+          sentence_en: "AI can help with learning.",
+          explanation_en: "“도와주다” means to help. “-ㄹ 수 있습니다” means “can / is able to”.",
+          pronunciation: "AI-neun hak-seub-eul do-wa-jul su it-seum-ni-da.",
+          level: "intermediate",
+          situation: "Describing what AI can do",
+          quiz_question: "What does “학습” mean?",
+          quiz_options: ["learning", "homework", "exam", "career"],
+          quiz_answer: "learning",
+          is_free: false
+        },
+        {
+          sentence_id: "10-3",
+          sentence_ko: "저는 미래 진로를 준비하고 있습니다.",
+          sentence_en: "I am preparing for my future career.",
+          explanation_en: "“진로” means career path. “준비하다” means to prepare.",
+          pronunciation: "jeo-neun mi-rae jin-ro-reul jun-bi-ha-go it-seum-ni-da.",
+          level: "intermediate",
+          situation: "Talking about your career",
+          quiz_question: "What does “진로” mean?",
+          quiz_options: ["career path", "learning", "vision", "facility"],
+          quiz_answer: "career path",
+          is_free: false
+        },
+        {
+          sentence_id: "10-4",
+          sentence_ko: "대학에서 AI 활용 능력은 중요합니다.",
+          sentence_en: "AI skills are important at university.",
+          explanation_en: "“능력” means ability/skill. “중요하다” means to be important.",
+          pronunciation: "dae-hag-e-seo AI hwal-yong neung-nyeog-eun jung-yo-ham-ni-da.",
+          level: "intermediate",
+          situation: "Emphasizing the importance of AI skills",
+          quiz_question: "What does “중요합니다” mean?",
+          quiz_options: ["it is important", "it is difficult", "it is easy", "it is finished"],
+          quiz_answer: "it is important",
+          is_free: false
+        },
+        {
+          sentence_id: "10-5",
+          sentence_ko: "저는 새로운 기술을 배우고 싶습니다.",
+          sentence_en: "I want to learn new technology/skills.",
+          explanation_en: "“기술” means technology/skill. “배우다” means to learn.",
+          pronunciation: "jeo-neun sae-ro-un gi-sul-eul bae-u-go sip-seum-ni-da.",
+          level: "intermediate",
+          situation: "Expressing what you want to learn",
+          quiz_question: "What does “배우다” mean?",
+          quiz_options: ["to learn", "to teach", "to forget", "to prepare"],
+          quiz_answer: "to learn",
+          is_free: false
+        }
+      ]
+    }
+  ]
+};
+
+</script>
+<script>
+(function () {
+  "use strict";
+  const DATA = window.KOLAN_CONTENT;
+  const MODULES = DATA.modules;
+  const STORE_KEY = "kolan_state_v1";
+
+  // ---------- State ----------
+  const defaultState = { completedModules: [], learnedSentences: [], quizScores: {}, favorites: [], unlocked: false };
+  let state = loadState();
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) return Object.assign({}, defaultState, JSON.parse(raw));
+    } catch (e) {}
+    return JSON.parse(JSON.stringify(defaultState));
+  }
+  function saveState() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  const totalSentences = MODULES.reduce((n, m) => n + m.sentences.length, 0);
+
+  // ---------- Helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const screens = ["home", "modules", "cards", "quiz", "roleplay", "complete", "fav"];
+  let history = ["home"];
+
+  function showScreen(name, push = true) {
+    screens.forEach((s) => $("screen-" + s).classList.toggle("active", s === name));
+    if (push) history.push(name);
+    // back button visibility
+    const rootTabs = ["home", "modules", "fav"];
+    $("backBtn").classList.toggle("show", !rootTabs.includes(name));
+    // tab highlight
+    document.querySelectorAll(".tabbar button").forEach((b) =>
+      b.classList.toggle("active", b.dataset.tab === name)
+    );
+    window.scrollTo(0, 0);
+  }
+
+  function goBack() {
+    if (history.length > 1) history.pop();
+    const prev = history[history.length - 1] || "home";
+    showScreen(prev, false);
+  }
+
+  function uniqPush(arr, v) { if (!arr.includes(v)) arr.push(v); }
+
+  // ---------- Speech ----------
+  let koVoice = null;
+  function pickVoice() {
+    const voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+    koVoice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith("ko")) || null;
+  }
+  if (window.speechSynthesis) {
+    pickVoice();
+    speechSynthesis.onvoiceschanged = pickVoice;
+  }
+  function speak(text, btn, rate) {
+    if (!window.speechSynthesis) {
+      alert("이 브라우저는 음성 기능을 지원하지 않습니다.\nThis browser does not support speech.");
+      return;
+    }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ko-KR";
+    if (koVoice) u.voice = koVoice;
+    u.rate = rate || 0.9;
+    if (btn) {
+      btn.classList.add("speaking");
+      u.onend = u.onerror = () => btn.classList.remove("speaking");
+    }
+    speechSynthesis.speak(u);
+  }
+
+  // ---------- Progress ----------
+  function moduleProgress(m) {
+    const learned = m.sentences.filter((s) => state.learnedSentences.includes(s.sentence_id)).length;
+    return { learned, total: m.sentences.length };
+  }
+  function overallPct() {
+    return totalSentences ? Math.round((state.learnedSentences.length / totalSentences) * 100) : 0;
+  }
+  function refreshProgressUI() {
+    const pct = overallPct();
+    $("topProgress").textContent = pct + "%";
+    $("overallPct").textContent = pct + "%";
+    $("overallBar").style.width = pct + "%";
+    $("overallText").textContent = state.learnedSentences.length + " / " + totalSentences + " 문장 학습";
+  }
+
+  // ---------- Render module card ----------
+  function moduleCardEl(m) {
+    const prog = moduleProgress(m);
+    const done = state.completedModules.includes(m.module_id);
+    const el = document.createElement("div");
+    el.className = "module-card" + (done ? " done" : "");
+    const locked = !m.is_free && !state.unlocked;
+    el.innerHTML =
+      '<div class="num">' + (done ? "✓" : m.module_id) + "</div>" +
+      '<div class="info">' +
+        '<div class="mt-ko">' + m.module_title_ko + "</div>" +
+        '<div class="mt-en">' + m.module_title_en + "</div>" +
+        '<div class="tags">' +
+          '<span class="tag lvl">' + (m.level === "beginner" ? "초급 Beginner" : "중급 Inter.") + "</span>" +
+          (m.is_free ? '<span class="tag free">무료 Free</span>' : '<span class="tag premium">유료 Premium</span>') +
+          '<span class="tag prog">' + prog.learned + "/" + prog.total + "</span>" +
+        "</div>" +
+      "</div>" +
+      (locked ? '<span class="lock-badge">🔒</span>' : '<span class="chev">›</span>');
+    el.addEventListener("click", () => openModule(m.module_id));
+    return el;
+  }
+
+  function renderModules() {
+    const list = $("moduleList");
+    list.innerHTML = "";
+    MODULES.forEach((m) => list.appendChild(moduleCardEl(m)));
+    const home = $("homeModules");
+    home.innerHTML = "";
+    MODULES.slice(0, 4).forEach((m) => home.appendChild(moduleCardEl(m)));
+  }
+
+  // ---------- Module flow ----------
+  let cur = { module: null, cardIndex: 0, quizIndex: 0, quizCorrect: 0, revealed: false };
+
+  function openModule(id) {
+    const m = MODULES.find((x) => x.module_id === id);
+    if (!m) return;
+    if (!m.is_free && !state.unlocked) {
+      pendingModule = id;
+      $("premiumModal").classList.add("show");
+      return;
+    }
+    cur = { module: m, cardIndex: 0, quizIndex: 0, quizCorrect: 0, revealed: false };
+    $("topTitle").innerHTML = m.module_title_ko + "<small>" + m.module_title_en + "</small>";
+    renderCard();
+    showScreen("cards");
+  }
+
+  let pendingModule = null;
+
+  // ---------- Cards ----------
+  function renderCard() {
+    const m = cur.module;
+    const s = m.sentences[cur.cardIndex];
+    cur.revealed = false;
+    $("cardCounter").textContent = (cur.cardIndex + 1) + " / " + m.sentences.length;
+    $("flashSituation").textContent = s.situation || "";
+    $("flashKo").textContent = s.sentence_ko;
+    $("flashPron").textContent = s.pronunciation;
+    $("flashEn").textContent = s.sentence_en;
+    $("flashExpl").innerHTML = "<b>설명 · Explanation</b><br>" + s.explanation_en;
+    $("reveal").classList.remove("show");
+    $("toggleReveal").textContent = "영어 번역·설명 보기 · Show meaning";
+    updateFavBtn(s.sentence_id);
+    $("nextCard").textContent = (cur.cardIndex === m.sentences.length - 1) ? "역할극 → " : "다음 →";
+    // mark learned
+    uniqPush(state.learnedSentences, s.sentence_id);
+    saveState();
+    refreshProgressUI();
+  }
+
+  function updateFavBtn(id) {
+    const on = state.favorites.includes(id);
+    const b = $("cardFav");
+    b.classList.toggle("on", on);
+    b.textContent = (on ? "♥ 즐겨찾기" : "♡ 즐겨찾기");
+  }
+
+  $("toggleReveal").addEventListener("click", () => {
+    cur.revealed = !cur.revealed;
+    $("reveal").classList.toggle("show", cur.revealed);
+    $("toggleReveal").textContent = cur.revealed ? "숨기기 · Hide" : "영어 번역·설명 보기 · Show meaning";
+  });
+  $("cardListen").addEventListener("click", () =>
+    speak(cur.module.sentences[cur.cardIndex].sentence_ko, $("cardListen"))
+  );
+  $("cardListenSlow").addEventListener("click", () =>
+    speak(cur.module.sentences[cur.cardIndex].sentence_ko, $("cardListenSlow"), 0.6)
+  );
+  $("cardFav").addEventListener("click", () => {
+    const id = cur.module.sentences[cur.cardIndex].sentence_id;
+    if (state.favorites.includes(id)) state.favorites = state.favorites.filter((x) => x !== id);
+    else state.favorites.push(id);
+    saveState();
+    updateFavBtn(id);
+  });
+  $("prevCard").addEventListener("click", () => {
+    if (cur.cardIndex > 0) { cur.cardIndex--; renderCard(); }
+  });
+  $("nextCard").addEventListener("click", () => {
+    if (cur.cardIndex < cur.module.sentences.length - 1) { cur.cardIndex++; renderCard(); }
+    else startRoleplay();
+  });
+
+  // ---------- Roleplay ----------
+  function startRoleplay() {
+    const rp = cur.module.roleplay;
+    $("rpPromptKo").textContent = rp.prompt_ko;
+    $("rpPromptEn").textContent = rp.prompt_en;
+    $("rpA").textContent = rp.role_a_ko;
+    $("rpB").textContent = rp.role_b_ko;
+    const ul = $("rpExpr");
+    ul.innerHTML = "";
+    rp.expressions.forEach((ex) => {
+      const li = document.createElement("li");
+      const span = document.createElement("span");
+      span.textContent = ex;
+      const b = document.createElement("button");
+      b.className = "mini-speak";
+      b.textContent = "🔊";
+      b.addEventListener("click", () => speak(ex, b));
+      li.appendChild(span);
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+    showScreen("roleplay");
+  }
+  $("rpToQuiz").addEventListener("click", startQuiz);
+
+  // ---------- Quiz ----------
+  // Two question types are mixed: standard meaning questions (from content data)
+  // and reverse questions (pick the Korean sentence that matches the English).
+  function buildQuizItems(m) {
+    return m.sentences.map((s, i) => {
+      if (i % 2 === 1 && m.sentences.length >= 4) {
+        const others = shuffle(m.sentences.filter((x) => x !== s)).slice(0, 3).map((x) => x.sentence_ko);
+        return {
+          q: "다음 영어 문장에 맞는 한국어 문장은 무엇입니까?",
+          sub: "English: " + s.sentence_en,
+          options: [s.sentence_ko].concat(others),
+          answer: s.sentence_ko,
+          expl: s.explanation_en
+        };
+      }
+      return {
+        q: s.quiz_question,
+        sub: "한국어: " + s.sentence_ko,
+        options: s.quiz_options,
+        answer: s.quiz_answer,
+        expl: s.explanation_en
+      };
+    });
+  }
+
+  function startQuiz() {
+    cur.quizIndex = 0;
+    cur.quizCorrect = 0;
+    cur.quizItems = buildQuizItems(cur.module);
+    renderQuiz();
+    showScreen("quiz");
+  }
+
+  function shuffle(a) {
+    const arr = a.slice();
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function renderQuiz() {
+    const items = cur.quizItems;
+    const it = items[cur.quizIndex];
+    $("quizCounter").textContent = "문제 " + (cur.quizIndex + 1) + " / " + items.length;
+    $("quizQ").textContent = it.q;
+    $("quizSub").textContent = it.sub;
+    const box = $("quizOptions");
+    box.innerHTML = "";
+    $("quizExplain").classList.remove("show");
+    $("quizNext").disabled = true;
+    $("quizNext").textContent = (cur.quizIndex === items.length - 1) ? "결과 보기 → " : "다음 문제 →";
+    shuffle(it.options).forEach((opt) => {
+      const b = document.createElement("button");
+      b.className = "opt";
+      b.textContent = opt;
+      b.addEventListener("click", () => answer(b, opt, it));
+      box.appendChild(b);
+    });
+  }
+
+  function answer(btn, opt, it) {
+    const correct = opt === it.answer;
+    document.querySelectorAll("#quizOptions .opt").forEach((o) => {
+      o.classList.add("disabled");
+      if (o.textContent === it.answer) o.classList.add("correct");
+    });
+    if (!correct) btn.classList.add("wrong");
+    else cur.quizCorrect++;
+    const ex = $("quizExplain");
+    ex.innerHTML = (correct ? "✅ 정답입니다! · Correct!" : "❌ 정답은 “" + it.answer + "” 입니다.") +
+      "<br><b>해설:</b> " + it.expl;
+    ex.classList.add("show");
+    $("quizNext").disabled = false;
+  }
+
+  $("quizNext").addEventListener("click", () => {
+    if (cur.quizIndex < cur.quizItems.length - 1) { cur.quizIndex++; renderQuiz(); }
+    else finishModule();
+  });
+
+  // ---------- Completion ----------
+  function finishModule() {
+    const m = cur.module;
+    uniqPush(state.completedModules, m.module_id);
+    state.quizScores[m.module_id] = { correct: cur.quizCorrect, total: m.sentences.length };
+    saveState();
+    refreshProgressUI();
+
+    $("completeTitle").textContent = m.module_title_ko + " 완료!";
+    $("completeSub").textContent = m.module_title_en + " complete";
+    $("statSentences").textContent = m.sentences.length;
+    $("statQuiz").textContent = cur.quizCorrect + "/" + m.sentences.length;
+    $("statPct").textContent = overallPct() + "%";
+    const review = m.sentences[Math.floor(Math.random() * m.sentences.length)];
+    $("reviewSentence").textContent = review.sentence_ko + "  —  " + review.sentence_en;
+    $("completeCulture").textContent = m.culture_tip;
+
+    const next = MODULES.find((x) => x.module_id === m.module_id + 1);
+    const card = $("nextModuleCard");
+    if (next) {
+      $("nextModuleText").textContent = next.module_title_ko + " · " + next.module_title_en;
+      card.style.display = "block";
+      card.onclick = () => openModule(next.module_id);
+    } else {
+      $("nextModuleText").textContent = "모든 모듈을 완료했습니다! 🎓 All modules complete!";
+      card.style.display = "block";
+      card.onclick = () => goTab("modules");
+    }
+    showScreen("complete");
+  }
+
+  $("backToModules").addEventListener("click", () => goTab("modules"));
+  $("shareBtn").addEventListener("click", () => {
+    const text = "가천 한국어-영어 캠퍼스 앱에서 " + state.learnedSentences.length +
+      "문장을 학습했어요! (" + overallPct() + "%) #한국어 #유학생";
+    if (navigator.share) navigator.share({ title: "Gachon Campus Korean", text: text }).catch(() => {});
+    else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => alert("결과가 복사되었습니다!\nCopied to clipboard."));
+    } else alert(text);
+  });
+
+  // ---------- Favorites ----------
+  function renderFavorites() {
+    const wrap = $("favList");
+    wrap.innerHTML = "";
+    const all = [];
+    MODULES.forEach((m) => m.sentences.forEach((s) => { if (state.favorites.includes(s.sentence_id)) all.push({ m, s }); }));
+    if (!all.length) {
+      wrap.innerHTML = '<div class="empty">⭐ 아직 즐겨찾기한 문장이 없습니다.<br>No favorites yet. Tap ♡ on a card to save it.</div>';
+      return;
+    }
+    all.forEach(({ m, s }) => {
+      const el = document.createElement("div");
+      el.className = "today-card";
+      el.innerHTML =
+        '<div class="label">' + m.module_title_ko + " · " + m.module_title_en + "</div>" +
+        '<div class="today-ko">' + s.sentence_ko + "</div>" +
+        '<div class="today-en">' + s.sentence_en + "</div>";
+      const row = document.createElement("div");
+      row.className = "today-actions";
+      const lb = document.createElement("button");
+      lb.className = "icon-btn"; lb.textContent = "🔊 듣기";
+      lb.addEventListener("click", () => speak(s.sentence_ko, lb));
+      const rb = document.createElement("button");
+      rb.className = "btn btn-ghost"; rb.style.marginLeft = "auto"; rb.textContent = "♥ 삭제";
+      rb.addEventListener("click", () => {
+        state.favorites = state.favorites.filter((x) => x !== s.sentence_id);
+        saveState(); renderFavorites();
+      });
+      row.appendChild(lb); row.appendChild(rb);
+      el.appendChild(row);
+      wrap.appendChild(el);
+    });
+  }
+
+  // ---------- Today's sentence ----------
+  function setToday() {
+    const flat = [];
+    MODULES.forEach((m) => m.sentences.forEach((s) => flat.push(s)));
+    const day = Math.floor(Date.now() / 86400000);
+    const s = flat[day % flat.length];
+    $("todayKo").textContent = s.sentence_ko;
+    $("todayEn").textContent = s.sentence_en;
+    $("todayListen").onclick = () => speak(s.sentence_ko, $("todayListen"));
+    $("todayLearn").onclick = () => {
+      const owner = MODULES.find((m) => m.sentences.includes(s));
+      openModule(owner.module_id);
+    };
+  }
+
+  // ---------- Tabs / nav ----------
+  function goTab(tab) {
+    history = ["home"];
+    if (tab !== "home") history.push(tab);
+    if (tab === "modules") renderModules();
+    if (tab === "fav") renderFavorites();
+    if (tab === "home") { $("topTitle").innerHTML = '가천 캠퍼스 한국어<small>Gachon Korean-English Campus App</small>'; }
+    showScreen(tab, false);
+  }
+  document.querySelectorAll(".tabbar button").forEach((b) =>
+    b.addEventListener("click", () => goTab(b.dataset.tab))
+  );
+  $("backBtn").addEventListener("click", goBack);
+  $("startBtn").addEventListener("click", () => goTab("modules"));
+  $("freeTrialBtn").addEventListener("click", () => {
+    const firstFree = MODULES.find((m) => m.is_free);
+    openModule(firstFree.module_id);
+  });
+
+  // ---------- Premium modal ----------
+  $("closeModal").addEventListener("click", () => $("premiumModal").classList.remove("show"));
+  $("premiumModal").addEventListener("click", (e) => { if (e.target.id === "premiumModal") $("premiumModal").classList.remove("show"); });
+  $("previewBtn").addEventListener("click", () => {
+    state.unlocked = true; saveState();
+    $("premiumModal").classList.remove("show");
+    renderModules();
+    if (pendingModule != null) { const id = pendingModule; pendingModule = null; openModule(id); }
+  });
+
+  // ---------- Init ----------
+  $("heroNameEn").textContent = DATA.meta.app_name_en;
+  $("heroNameKo").textContent = DATA.meta.app_name_ko;
+  $("heroTagline").textContent = DATA.meta.tagline_ko;
+  setToday();
+  renderModules();
+  refreshProgressUI();
+})();
+</script>
+</body>
+</html>
