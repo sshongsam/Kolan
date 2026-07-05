@@ -271,6 +271,31 @@
   footer.foot { text-align: center; color: #9aa3b2; font-size: 11px; padding: 18px; }
   .kbd-hint { display: none; }
 
+  /* ---------- Print view: full study pack, shown only when printing ---------- */
+  .print-view { display: none; }
+  @media print {
+    @page { margin: 18mm 15mm; }
+    body { background: #fff; }
+    .app { display: none !important; }
+    .print-view { display: block; color: #000; font-size: 11pt; line-height: 1.5; }
+    .pv-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+    .pv-header h1 { margin: 0; font-size: 18pt; }
+    .pv-header p { margin: 3px 0 0; font-size: 9.5pt; color: #333; }
+    .pm + .pm { break-before: page; }
+    .pm h2 { font-size: 13.5pt; border-bottom: 1.5px solid #000; padding-bottom: 4px; margin: 0 0 3px; }
+    .pm-meta { font-size: 9pt; color: #444; margin-bottom: 10px; }
+    .ps { margin-bottom: 11px; break-inside: avoid; }
+    .ps-ko { font-weight: 700; font-size: 12pt; }
+    .ps-pron { font-style: italic; color: #555; font-size: 9pt; }
+    .ps-en { font-size: 10.5pt; }
+    .ps-expl { font-size: 9pt; color: #333; }
+    .ps-write { border-bottom: 1px dotted #999; height: 20px; margin-top: 5px; }
+    .pv-box { border: 1px solid #888; border-radius: 6px; padding: 8px 12px; margin: 10px 0; break-inside: avoid; font-size: 10pt; }
+    .pv-box b { display: block; margin-bottom: 3px; }
+    .pv-note-line { border-bottom: 1px solid #bbb; height: 24px; }
+    .pv-foot { text-align: center; font-size: 8.5pt; color: #555; margin-top: 16px; }
+  }
+
   /* ---------- Desktop layout (≥900px): sidebar nav + wide content ---------- */
   @media (min-width: 900px) {
     .app {
@@ -372,7 +397,7 @@
         본 앱은 한국어 학습을 위한 교육용 앱입니다. 여권번호, 외국인등록번호, 주소, 전화번호 등 민감한 개인정보를 입력하지 마세요.<br>
         This is an educational app. Please do not enter sensitive personal information such as passport, ID, address, or phone numbers.
       </div>
-      <footer class="foot">v1.3.1 무료버전 (Free Edition) · 전체 콘텐츠 무료 · 로그인 불필요 · 모바일·데스크탑 지원 · 진도는 내 브라우저에만 저장</footer>
+      <footer class="foot">v1.4.0 무료버전 (Free Edition) · 전체 콘텐츠 무료 · 로그인 불필요 · 모바일·데스크탑 지원 · 진도는 내 브라우저에만 저장</footer>
     </section>
 
     <!-- MODULES -->
@@ -523,6 +548,11 @@
       </div>
 
       <div class="info-card">
+        <h3>📄 전체 자료 PDF로 받기 · Download everything as PDF</h3>
+        <p>하단(데스크탑은 왼쪽)의 <b>📄 PDF</b> 버튼을 누르면 10개 모듈 50문장 전체가 인쇄용 문서로 열립니다. 인쇄 화면에서 대상(프린터)을 <b>"PDF로 저장"</b>으로 선택하세요. 문장마다 따라 쓰기 줄, 모듈마다 메모 칸이 있어 종이나 태블릿에서 필기하며 통합 학습할 수 있습니다.<br>Tap the 📄 PDF button, then choose "Save as PDF" in the print dialog. Every sentence has a writing line and every module has a notes box for handwritten study.</p>
+      </div>
+
+      <div class="info-card">
         <h3>🔇 소리가 안 나올 때 · No sound?</h3>
         <p>기기의 무음 모드를 해제하고 다시 시도하세요. 듣기 기능은 브라우저 내장 음성(한국어)을 사용하므로 Chrome, Edge, Safari 최신 버전을 권장합니다.<br>Turn off silent mode and try again. Listening uses your browser's built-in Korean voice — Chrome, Edge, or Safari recommended.</p>
       </div>
@@ -536,8 +566,13 @@
     <button data-tab="modules"><span class="ic">📚</span>모듈</button>
     <button data-tab="fav"><span class="ic">⭐</span>즐겨찾기</button>
     <button data-tab="guide"><span class="ic">📖</span>가이드</button>
+    <button id="pdfBtn"><span class="ic">📄</span>PDF</button>
   </nav>
 </div>
+
+<!-- Print-only full study pack: filled on demand, rendered by the browser's
+     print dialog where students choose "Save as PDF" -->
+<div class="print-view" id="printView" aria-hidden="true"></div>
 
 <script>
 /*
@@ -1809,13 +1844,49 @@ window.KOLAN_CONTENT = {
     if (tab === "home") { $("topTitle").innerHTML = '가천 캠퍼스 한국어<small>Gachon Korean-English Campus App · 무료버전 Free</small>'; }
     showScreen(tab, false);
   }
-  document.querySelectorAll(".tabbar button").forEach((b) =>
+  document.querySelectorAll(".tabbar button[data-tab]").forEach((b) =>
     b.addEventListener("click", () => goTab(b.dataset.tab))
   );
   $("backBtn").addEventListener("click", goBack);
   $("startBtn").addEventListener("click", () => goTab("modules"));
   $("homeGuideBtn").addEventListener("click", () => goTab("guide"));
   $("guideStart").addEventListener("click", () => goTab("modules"));
+
+  // ---------- PDF study pack (browser print -> "Save as PDF") ----------
+  function buildPrintView() {
+    const today = new Date().toLocaleDateString("ko-KR");
+    let h =
+      '<div class="pv-header"><h1>' + DATA.meta.app_name_ko + "</h1>" +
+      "<p>" + DATA.meta.app_name_en + " · v1.4.0 무료버전 (Free Edition)</p>" +
+      "<p>전체 학습 자료 · Complete Study Pack · " + today + "</p>" +
+      "<p>10개 모듈 · 50문장 · 한국어-영어 병기 · 문장마다 따라 쓰기 줄, 모듈마다 메모 칸이 있습니다.</p></div>";
+    MODULES.forEach((m) => {
+      h += '<section class="pm"><h2>모듈 ' + m.module_id + ". " + m.module_title_ko + " · " + m.module_title_en + "</h2>";
+      h += '<div class="pm-meta">' + (m.level === "beginner" ? "초급 Beginner" : "중급 Intermediate") + " · " + m.situation + "</div>";
+      m.sentences.forEach((sen) => {
+        h += '<div class="ps">' +
+          '<div class="ps-ko">' + sen.sentence_id + ". " + sen.sentence_ko + "</div>" +
+          '<div class="ps-pron">' + sen.pronunciation + "</div>" +
+          '<div class="ps-en">' + sen.sentence_en + "</div>" +
+          '<div class="ps-expl">' + sen.explanation_en + "</div>" +
+          '<div class="ps-write"></div></div>';
+      });
+      const rp = m.roleplay;
+      h += '<div class="pv-box"><b>🎭 역할극 · Role-play</b>' + rp.prompt_ko + "<br>" + rp.prompt_en +
+        "<br>A: " + rp.role_a_ko + "<br>B: " + rp.role_b_ko + "</div>";
+      h += '<div class="pv-box"><b>💡 문화 팁 · Culture tip</b>' + m.culture_tip + "</div>";
+      h += '<div class="pv-box"><b>✍️ 메모 · My Notes</b>' +
+        '<div class="pv-note-line"></div><div class="pv-note-line"></div>' +
+        '<div class="pv-note-line"></div><div class="pv-note-line"></div></div>';
+      h += "</section>";
+    });
+    h += '<div class="pv-foot">' + DATA.meta.app_name_ko + " · 교육용 무료 배포 자료</div>";
+    $("printView").innerHTML = h;
+  }
+  $("pdfBtn").addEventListener("click", () => {
+    buildPrintView();
+    window.print();
+  });
 
   // ---------- Init ----------
   $("heroNameEn").textContent = DATA.meta.app_name_en;
