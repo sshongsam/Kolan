@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#1f6feb" />
 <meta name="description" content="가천 한국어-영어 캠퍼스 앱 — 한국 대학생활에 필요한 한국어를 영어와 함께 배우세요." />
 <title>가천 한국어-영어 캠퍼스 앱 · Gachon Korean-English Campus App</title>
@@ -293,6 +293,57 @@
 
   .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
   footer.foot { text-align: center; color: #9aa3b2; font-size: 11px; padding: 18px; }
+  .kbd-hint { display: none; }
+
+  /* ---------- Desktop layout (≥900px): sidebar nav + wide content ---------- */
+  @media (min-width: 900px) {
+    .app {
+      max-width: 1140px;
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      grid-template-rows: auto 1fr;
+      grid-template-areas: "header header" "nav main";
+      border-left: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+    }
+    header.topbar { grid-area: header; padding: 16px 28px; }
+    .tabbar {
+      grid-area: nav;
+      position: sticky; top: 72px; bottom: auto; align-self: start;
+      flex-direction: column; gap: 4px;
+      background: transparent; backdrop-filter: none;
+      border-top: none; border-right: 1px solid var(--line);
+      padding: 20px 12px; min-height: calc(100vh - 72px);
+    }
+    .tabbar button {
+      flex: 0 0 auto; flex-direction: row; justify-content: flex-start; gap: 12px;
+      padding: 12px 16px; font-size: 14px; border-radius: 12px; width: 100%;
+    }
+    .tabbar button .ic { font-size: 18px; }
+    .tabbar button.active { background: var(--brand-soft); }
+    main { grid-area: main; padding: 28px 40px 70px; }
+
+    .hero { padding: 34px 36px; }
+    .hero h1 { font-size: 28px; }
+    .hero p { font-size: 15px; max-width: 60ch; }
+
+    .module-grid { grid-template-columns: 1fr 1fr; }
+
+    /* Focused screens read better at a comfortable column width */
+    #screen-cards, #screen-quiz, #screen-roleplay, #screen-complete {
+      max-width: 640px; margin: 0 auto;
+    }
+    .flash-ko { font-size: 30px; }
+
+    .kbd-hint {
+      display: block; text-align: center; color: var(--muted);
+      font-size: 12px; margin-top: 14px;
+    }
+    .kbd-hint kbd {
+      background: var(--chip); border: 1px solid var(--line); border-radius: 6px;
+      padding: 2px 7px; font-family: inherit; font-size: 11px; font-weight: 700;
+    }
+  }
 </style>
 </head>
 <body>
@@ -343,7 +394,7 @@
         본 앱은 한국어 학습을 위한 교육용 앱입니다. 여권번호, 외국인등록번호, 주소, 전화번호 등 민감한 개인정보를 입력하지 마세요.<br>
         This is an educational app. Please do not enter sensitive personal information such as passport, ID, address, or phone numbers.
       </div>
-      <footer class="foot">v1.1.0 · MVP · 가천대학교 외국인 유학생 대상 · localStorage 기반 진도 저장</footer>
+      <footer class="foot">v1.2.0 · MVP · 가천대학교 외국인 유학생 대상 · 모바일·데스크탑 지원 · localStorage 기반 진도 저장</footer>
     </section>
 
     <!-- MODULES -->
@@ -377,6 +428,7 @@
         <button class="btn btn-ghost" id="prevCard">← 이전</button>
         <button class="btn btn-primary" id="nextCard">다음 →</button>
       </div>
+      <div class="kbd-hint"><kbd>←</kbd> <kbd>→</kbd> 카드 이동 · <kbd>Space</kbd> 뜻 보기 · <kbd>L</kbd> 듣기</div>
     </section>
 
     <!-- QUIZ -->
@@ -672,6 +724,14 @@
   });
   $("prevCard").addEventListener("click", () => {
     if (cur.cardIndex > 0) { cur.cardIndex--; renderCard(); }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (!$("screen-cards").classList.contains("active")) return;
+    if ($("premiumModal").classList.contains("show")) return;
+    if (e.key === "ArrowRight") $("nextCard").click();
+    else if (e.key === "ArrowLeft") $("prevCard").click();
+    else if (e.key === " ") { e.preventDefault(); $("toggleReveal").click(); }
+    else if (e.key === "l" || e.key === "L") $("cardListen").click();
   });
   $("nextCard").addEventListener("click", () => {
     if (cur.cardIndex < cur.module.sentences.length - 1) { cur.cardIndex++; renderCard(); }
