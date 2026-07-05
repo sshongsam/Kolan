@@ -397,7 +397,7 @@
         본 앱은 한국어 학습을 위한 교육용 앱입니다. 여권번호, 외국인등록번호, 주소, 전화번호 등 민감한 개인정보를 입력하지 마세요.<br>
         This is an educational app. Please do not enter sensitive personal information such as passport, ID, address, or phone numbers.
       </div>
-      <footer class="foot">v1.4.0 무료버전 (Free Edition) · 전체 콘텐츠 무료 · 로그인 불필요 · 모바일·데스크탑 지원 · 진도는 내 브라우저에만 저장</footer>
+      <footer class="foot">v1.4.1 무료버전 (Free Edition) · 전체 콘텐츠 무료 · 로그인 불필요 · 모바일·데스크탑 지원 · 진도는 내 브라우저에만 저장</footer>
     </section>
 
     <!-- MODULES -->
@@ -549,7 +549,7 @@
 
       <div class="info-card">
         <h3>📄 전체 자료 PDF로 받기 · Download everything as PDF</h3>
-        <p>하단(데스크탑은 왼쪽)의 <b>📄 PDF</b> 버튼을 누르면 10개 모듈 50문장 전체가 인쇄용 문서로 열립니다. 인쇄 화면에서 대상(프린터)을 <b>"PDF로 저장"</b>으로 선택하세요. 문장마다 따라 쓰기 줄, 모듈마다 메모 칸이 있어 종이나 태블릿에서 필기하며 통합 학습할 수 있습니다.<br>Tap the 📄 PDF button, then choose "Save as PDF" in the print dialog. Every sentence has a writing line and every module has a notes box for handwritten study.</p>
+        <p>하단(데스크탑은 왼쪽)의 <b>📄 PDF</b> 버튼을 누르면 10개 모듈 50문장 전체가 담긴 <b>학습자료 PDF 파일이 바로 다운로드</b>됩니다. 문장마다 따라 쓰기 줄, 모듈마다 메모 칸이 있어 종이나 태블릿에서 필기하며 통합 학습할 수 있습니다. 다운로드가 안 되는 환경에서는 인쇄 화면이 대신 열리며, 대상(프린터)을 "PDF로 저장"으로 선택하면 됩니다.<br>Tap the 📄 PDF button to download the full study pack as a PDF file. Every sentence has a writing line and every module has a notes box. If download is blocked, a print dialog opens instead — choose "Save as PDF".</p>
       </div>
 
       <div class="info-card">
@@ -993,7 +993,7 @@
     const today = new Date().toLocaleDateString("ko-KR");
     let h =
       '<div class="pv-header"><h1>' + DATA.meta.app_name_ko + "</h1>" +
-      "<p>" + DATA.meta.app_name_en + " · v1.4.0 무료버전 (Free Edition)</p>" +
+      "<p>" + DATA.meta.app_name_en + " · v1.4.1 무료버전 (Free Edition)</p>" +
       "<p>전체 학습 자료 · Complete Study Pack · " + today + "</p>" +
       "<p>10개 모듈 · 50문장 · 한국어-영어 병기 · 문장마다 따라 쓰기 줄, 모듈마다 메모 칸이 있습니다.</p></div>";
     MODULES.forEach((m) => {
@@ -1019,7 +1019,28 @@
     h += '<div class="pv-foot">' + DATA.meta.app_name_ko + " · 교육용 무료 배포 자료</div>";
     $("printView").innerHTML = h;
   }
+  // The build step embeds the pre-rendered study pack as base64 in
+  // window.KOLAN_PDF_B64 so the button downloads a real PDF file directly —
+  // window.print() is blocked in some webviews (KakaoTalk, sandboxed iframes).
+  function downloadPdf() {
+    try {
+      const bin = atob(window.KOLAN_PDF_B64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "kolan-study-pack.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      return true;
+    } catch (e) { return false; }
+  }
   $("pdfBtn").addEventListener("click", () => {
+    if (window.KOLAN_PDF_B64 && downloadPdf()) return;
     buildPrintView();
     window.print();
   });
