@@ -8,6 +8,15 @@ professors, group projects, the library/admin office, and more).
 This repository contains the **MVP** described in the planning document — built as a single-file web app
 (the fastest form for classroom testing and student feedback, per the spec).
 
+## 🌐 웹으로 바로 사용하기 · Use on the web
+
+학생 배포용 웹페이지 (GitHub Pages):
+
+**https://sshongsam.github.io/Kolan/**
+
+접속만 하면 설치·로그인 없이 바로 사용할 수 있습니다. 배포 브랜치는 `gh-pages`이며,
+콘텐츠 수정 후에는 `node scripts/build.mjs`로 빌드한 `dist/` 결과물을 `gh-pages`에 다시 푸시하면 갱신됩니다.
+
 ## 실행 방법 · How to run
 
 No build step or server required. Just open the file in a browser:
