@@ -389,6 +389,16 @@
 
       <button class="btn btn-ghost btn-block" id="homeGuideBtn">📖 앱 사용 가이드 · How to use this app</button>
 
+      <div class="section-title">다른 언어 버전 <small>· Other languages</small></div>
+      <div class="today-card">
+        <div class="label">한국어 + 모국어로 배우는 캠퍼스 생활 · Campus life in your language</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+          <a class="btn btn-ghost" style="flex:1;min-width:120px;text-align:center;text-decoration:none;" href="https://sshongsam.github.io/Kolan/vi/">🇻🇳 Tiếng Việt</a>
+          <a class="btn btn-ghost" style="flex:1;min-width:120px;text-align:center;text-decoration:none;" href="https://sshongsam.github.io/Kolan/mn/">🇲🇳 Монгол</a>
+          <a class="btn btn-ghost" style="flex:1;min-width:120px;text-align:center;text-decoration:none;" href="https://sshongsam.github.io/Kolan/zh/">🇨🇳 中文</a>
+        </div>
+      </div>
+
       <div class="section-title">학습 모듈 바로가기 <small>· Modules</small></div>
       <div class="module-grid" id="homeModules"></div>
 
@@ -397,7 +407,7 @@
         본 앱은 한국어 학습을 위한 교육용 앱입니다. 여권번호, 외국인등록번호, 주소, 전화번호 등 민감한 개인정보를 입력하지 마세요.<br>
         This is an educational app. Please do not enter sensitive personal information such as passport, ID, address, or phone numbers.
       </div>
-      <footer class="foot">v1.4.2 무료버전 (Free Edition) · 전체 콘텐츠 무료 · 로그인 불필요 · 모바일·데스크탑 지원 · 진도는 내 브라우저에만 저장</footer>
+      <footer class="foot">v1.4.3 무료버전 (Free Edition) · 전체 콘텐츠 무료 · 로그인 불필요 · 모바일·데스크탑 지원 · 진도는 내 브라우저에만 저장</footer>
     </section>
 
     <!-- MODULES -->
@@ -1020,7 +1030,7 @@
     const today = new Date().toLocaleDateString("ko-KR");
     let h =
       '<div class="pv-header"><h1>' + DATA.meta.app_name_ko + "</h1>" +
-      "<p>" + DATA.meta.app_name_en + " · v1.4.2 무료버전 (Free Edition)</p>" +
+      "<p>" + DATA.meta.app_name_en + " · v1.4.3 무료버전 (Free Edition)</p>" +
       "<p>전체 학습 자료 · Complete Study Pack · " + today + "</p>" +
       "<p>10개 모듈 · 50문장 · 한국어-영어 병기 · 문장마다 따라 쓰기 줄, 모듈마다 메모 칸이 있습니다.</p></div>";
     MODULES.forEach((m) => {
