@@ -397,7 +397,7 @@
         본 앱은 한국어 학습을 위한 교육용 앱입니다. 여권번호, 외국인등록번호, 주소, 전화번호 등 민감한 개인정보를 입력하지 마세요.<br>
         This is an educational app. Please do not enter sensitive personal information such as passport, ID, address, or phone numbers.
       </div>
-      <footer class="foot">v1.4.1 무료버전 (Free Edition) · 전체 콘텐츠 무료 · 로그인 불필요 · 모바일·데스크탑 지원 · 진도는 내 브라우저에만 저장</footer>
+      <footer class="foot">v1.4.2 무료버전 (Free Edition) · 전체 콘텐츠 무료 · 로그인 불필요 · 모바일·데스크탑 지원 · 진도는 내 브라우저에만 저장</footer>
     </section>
 
     <!-- MODULES -->
@@ -554,7 +554,7 @@
 
       <div class="info-card">
         <h3>🔇 소리가 안 나올 때 · No sound?</h3>
-        <p>기기의 무음 모드를 해제하고 다시 시도하세요. 듣기 기능은 브라우저 내장 음성(한국어)을 사용하므로 Chrome, Edge, Safari 최신 버전을 권장합니다.<br>Turn off silent mode and try again. Listening uses your browser's built-in Korean voice — Chrome, Edge, or Safari recommended.</p>
+        <p>① 카카오톡·인스타그램 등 <b>앱 안의 브라우저</b>에서는 음성 재생이 지원되지 않습니다 — 링크를 Chrome이나 Safari로 열어주세요 (듣기 버튼을 누르면 이동 안내가 나옵니다). ② 기기의 무음 모드를 해제하고 다시 시도하세요. 듣기 기능은 브라우저 내장 음성(한국어)을 사용하므로 Chrome, Edge, Safari 최신 버전을 권장합니다.<br>① In-app browsers (KakaoTalk, Instagram...) cannot play audio — open the link in Chrome or Safari. ② Turn off silent mode and try again.</p>
       </div>
 
       <button class="btn btn-primary btn-block" id="guideStart" style="margin-top:4px;">학습 시작하기 → · Start learning</button>
@@ -628,21 +628,47 @@
   function uniqPush(arr, v) { if (!arr.includes(v)) arr.push(v); }
 
   // ---------- Speech ----------
+  // In-app webviews (KakaoTalk, Instagram, Naver...) often have no
+  // speechSynthesis at all — steer those users to a real browser instead
+  // of showing a dead-end error.
+  const TTS_OK = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+  const PAGES_URL = "https://sshongsam.github.io/Kolan/";
+
+  function appUrl() {
+    return (location.protocol === "http:" || location.protocol === "https:")
+      ? location.href.split("#")[0] : PAGES_URL;
+  }
+
+  function openInBrowser() {
+    const url = appUrl();
+    const ua = navigator.userAgent;
+    if (/KAKAOTALK/i.test(ua)) {
+      // KakaoTalk's own escape hatch: opens the device's default browser
+      location.href = "kakaotalk://web/openExternal?url=" + encodeURIComponent(url);
+      return;
+    }
+    if (/android/i.test(ua)) {
+      location.href = "intent://" + url.replace(/^https?:\/\//, "") +
+        "#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=" +
+        encodeURIComponent(url) + ";end";
+      return;
+    }
+    if (navigator.clipboard) navigator.clipboard.writeText(url).catch(() => {});
+    alert("현재 브라우저(인앱 브라우저)에서는 듣기 기능이 지원되지 않습니다.\n주소가 복사되었습니다 — Safari 또는 Chrome에 붙여넣어 열어주세요.\n\nListening is not supported in this in-app browser.\nThe address was copied — paste it into Safari or Chrome.");
+  }
+
   let koVoice = null;
   function pickVoice() {
-    const voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+    const voices = TTS_OK ? speechSynthesis.getVoices() : [];
     koVoice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith("ko")) || null;
   }
-  if (window.speechSynthesis) {
+  if (TTS_OK) {
     pickVoice();
     speechSynthesis.onvoiceschanged = pickVoice;
   }
   function speak(text, btn, rate) {
-    if (!window.speechSynthesis) {
-      alert("이 브라우저는 음성 기능을 지원하지 않습니다.\nThis browser does not support speech.");
-      return;
-    }
-    speechSynthesis.cancel();
+    if (!TTS_OK) { openInBrowser(); return; }
+    try { speechSynthesis.cancel(); } catch (e) {}
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "ko-KR";
     if (koVoice) u.voice = koVoice;
@@ -651,7 +677,8 @@
       btn.classList.add("speaking");
       u.onend = u.onerror = () => btn.classList.remove("speaking");
     }
-    speechSynthesis.speak(u);
+    // iOS Safari drops utterances queued in the same tick as cancel()
+    setTimeout(() => speechSynthesis.speak(u), 60);
   }
 
   // ---------- Progress ----------
@@ -993,7 +1020,7 @@
     const today = new Date().toLocaleDateString("ko-KR");
     let h =
       '<div class="pv-header"><h1>' + DATA.meta.app_name_ko + "</h1>" +
-      "<p>" + DATA.meta.app_name_en + " · v1.4.1 무료버전 (Free Edition)</p>" +
+      "<p>" + DATA.meta.app_name_en + " · v1.4.2 무료버전 (Free Edition)</p>" +
       "<p>전체 학습 자료 · Complete Study Pack · " + today + "</p>" +
       "<p>10개 모듈 · 50문장 · 한국어-영어 병기 · 문장마다 따라 쓰기 줄, 모듈마다 메모 칸이 있습니다.</p></div>";
     MODULES.forEach((m) => {
@@ -1046,6 +1073,22 @@
   });
 
   // ---------- Init ----------
+  if (!TTS_OK) {
+    const n = document.createElement("div");
+    n.className = "notice";
+    n.innerHTML = "<b>🔊 듣기 기능 안내 · About listening</b>" +
+      "지금 사용 중인 브라우저(카카오톡 등 앱 안의 브라우저)는 음성 재생을 지원하지 않습니다. " +
+      "아래 버튼으로 Chrome이나 Safari에서 열면 듣기를 포함한 모든 기능을 사용할 수 있습니다.<br>" +
+      "This in-app browser cannot play audio. Open the app in Chrome or Safari to use listening.";
+    const ob = document.createElement("button");
+    ob.className = "btn btn-primary btn-block";
+    ob.style.marginTop = "10px";
+    ob.textContent = "🌐 Chrome/Safari에서 열기 · Open in browser";
+    ob.addEventListener("click", openInBrowser);
+    n.appendChild(ob);
+    const home = $("screen-home");
+    home.insertBefore(n, home.children[1]);
+  }
   $("heroNameEn").textContent = DATA.meta.app_name_en;
   $("heroNameKo").textContent = DATA.meta.app_name_ko;
   $("heroTagline").textContent = DATA.meta.tagline_ko;
