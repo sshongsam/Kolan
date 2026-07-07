@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>실종자 가족 지원 및 유전자 등록 시스템</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS config for customized police dashboard palette (Teal & Warm Pink theme for Sighting Care) -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            police: {
+              900: '#0b0f19',
+              800: '#111827',
+              700: '#1f2937',
+              600: '#374151',
+              blue: '#1e3a8a',
+              neon: '#14b8a6', // Teal glow for family care & support
+              accent: '#2dd4bf',
+              pink: '#ec4899', // Warm Pink for family hope
+              amber: '#f59e0b',
+              crimson: '#ef4444'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- React & ReactDOM (React 18) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <!-- Babel Compiler for in-browser JSX parsing -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin="anonymous"></script>
+  
+  <!-- Google Fonts: Inter & Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0b0f19;
+      color: #e5e7eb;
+      overflow-x: hidden;
+    }
+    
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b0f19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f2937;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #14b8a6;
+    }
+
+    /* Glassmorphism utility */
+    .glass-panel {
+      background: rgba(17, 24, 39, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(20, 184, 166, 0.15); /* Teal border */
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    
+    .glass-input {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #f3f4f6;
+      transition: all 0.2s ease-in-out;
+    }
+    
+    .glass-input:focus {
+      border-color: #14b8a6;
+      box-shadow: 0 0 10px rgba(20, 184, 166, 0.3);
+      outline: none;
+    }
+
+    .neon-text-glow {
+      text-shadow: 0 0 8px rgba(20, 184, 166, 0.6);
+    }
+
+    .neon-border-glow:hover {
+      box-shadow: 0 0 15px rgba(20, 184, 166, 0.3);
+      border-color: rgba(20, 184, 166, 0.4);
+    }
+
+    /* DNA Helix Rotating Animation */
+    @keyframes rotate-dna {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .dna-spiral {
+      transform-origin: 50% 50%;
+      animation: rotate-dna 12s linear infinite;
+    }
+
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        font-family: 'Batang', 'Times New Roman', serif !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-area {
+        display: block !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- React root mount point -->
+  <div id="root"></div>
+
+  <!-- Core App Code in Babel JSX -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- MOCK SEARCHING FAMILIES & DNA DB ---
+    const FAMILY_DB = [
+      {
+        id: "FAM-098234",
+        parentName: "김철수",
+        parentRrn: "651015-1123456",
+        relation: "부 (Father)",
+        missingChildName: "김민우",
+        missingAgeAtLoss: 7,
+        missingYear: 2016, // 10년 전 분실
+        contact: "010-1234-5678",
+        address: "서울특별시 강남구 테헤란로 123",
+        specialFeatures: "오른쪽 뺨에 희미한 마름모꼴 흉터가 있었음. 활달한 소년.",
+        childPhotoUrlAtLoss: "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?auto=format&fit=crop&q=80&w=300",
+        childPhotoUrlAgedUp: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=300" // 17세로 변환된 청소년 가상 이미지
+      },
+      {
+        id: "FAM-154930",
+        parentName: "박지영",
+        parentRrn: "720423-2987654",
+        relation: "모 (Mother)",
+        missingChildName: "이하은",
+        missingAgeAtLoss: 11,
+        missingYear: 2021, // 5년 전 분실
+        contact: "010-8765-4321",
+        address: "부산광역시 해운대구 우동 456",
+        specialFeatures: "왼손잡이이며 발음이 다소 부정확했음. 차분한 성격.",
+        childPhotoUrlAtLoss: "https://images.unsplash.com/photo-1519824141125-994e37bd7a10?auto=format&fit=crop&q=80&w=300",
+        childPhotoUrlAgedUp: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=300" // 16세로 변환된 여성 청소년 가상 이미지
+      }
+    ];
+
+    function FamilySupportApp() {
+      // --- STATE MANAGEMENT ---
+      const [selectedFamilyId, setSelectedFamilyId] = useState(FAMILY_DB[0].id);
+      const [selectedFamily, setSelectedFamily] = useState(FAMILY_DB[0]);
+
+      // 유전자 채취 및 동의 상태 (법 제11조)
+      const [preCheckDone, setPreCheckDone] = useState(false); // DB 사전조회 완료 여부 (제3항)
+      const [preCheckLog, setPreCheckLog] = useState("");
+      
+      const [samplingName, setSamplingName] = useState("");
+      const [samplingRrn, setSamplingRrn] = useState("");
+      const [samplingRelation, setSamplingRelation] = useState("");
+      const [samplingContact, setSamplingContact] = useState("");
+      
+      // 동의 체크 박스 (법적 서식용)
+      const [consentDna, setConsentDna] = useState(false); // 타액 채취 동의 (제4항)
+      const [consentDualData, setConsentDualData] = useState(false); // 이원화 보관 동의 (제5항)
+      const [consentResample, setConsentResample] = useState(false); // 재채취 동의
+      
+      // 전자서명 패드 시뮬레이터
+      const [signature, setSignature] = useState(null);
+      const [isDrawing, setIsDrawing] = useState(false);
+      const sigCanvasRef = useRef(null);
+
+      // AI 나이 변환 전단지 변수
+      const [flyerAge, setFlyerAge] = useState(7); // 슬라이더 제어 (7세부터 22세까지)
+      const [ageProgressionPhoto, setAgeProgressionPhoto] = useState("");
+
+      // DNA 매칭 시뮬레이터 상태 (국과수 연계)
+      const [dnaScanning, setDnaScanning] = useState(false);
+      const [reunionMatched, setReunionMatched] = useState(false);
+
+      // 심리치료 및 법률 연계 신청서 기안 현황
+      const [supportReferrals, setSupportReferrals] = useState([]);
+      const [supportType, setSupportType] = useState("심리치료"); // 심리치료, 법률지원(실종선고), 자조모임
+      const [referralMemo, setReferralMemo] = useState("실종 가족 자조모임 및 트라우마 극복 심리 상담 프로그램 연계 희망.");
+
+      // 파기대장 관리 장부 (법 제13조 - 2대 폐기 사유 준수)
+      const [destructionLogs, setDestructionLogs] = useState([]);
+      const [showDestructionLog, setShowDestructionLog] = useState(false);
+
+      // 인쇄/출력 모달
+      const [showPrintModal, setShowPrintModal] = useState(false);
+      const [printModeType, setPrintModeType] = useState("flyer"); // flyer 또는 consent
+
+      // --- LOGIC: 사전조회 의무 이행 (법 제11조 제3항) ---
+      const handlePreCheck = () => {
+        if (!samplingName && !samplingRrn) {
+          alert("조회를 위해 신청자 성명 또는 주민등록번호를 먼저 입력하십시오.");
+          return;
+        }
+
+        setPreCheckLog("🔍 국과수 및 보장원 유전자 데이터베이스 중복 가입 여부 검증 중...");
+        
+        setTimeout(() => {
+          setPreCheckDone(true);
+          setPreCheckLog(`✅ 검증 완료: 기 가입 이력 없음. 신규 채취 등록이 즉시 허용됩니다. (조회 로그 식별 ID: DB-CHECK-${Math.floor(1000 + Math.random() * 9000)})`);
+          alert("✅ [사전 조회 의무 완료]\n동일 대상자의 기존 등록 유전정보가 존재하지 않습니다. 적법하게 채취 및 서면동의서 작성을 개시할 수 있습니다.");
+        }, 1500);
+      };
+
+      // --- 전자서명 패드 시뮬레이터 핸들러 ---
+      const startDrawing = (e) => {
+        setIsDrawing(true);
+        draw(e);
+      };
+
+      const draw = (e) => {
+        if (!isDrawing) return;
+        const canvas = sigCanvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const rect = canvas.getBoundingClientRect();
+        
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#14b8a6'; // Teal color
+        
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+      };
+
+      const stopDrawing = () => {
+        setIsDrawing(false);
+        const canvas = sigCanvasRef.current;
+        const ctx = canvas.getContext('2d');
+        ctx.beginPath();
+        setSignature(canvas.toDataURL());
+      };
+
+      const clearSignature = () => {
+        const canvas = sigCanvasRef.current;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setSignature(null);
+      };
+
+      // --- 사건 변경 시 동기화 ---
+      useEffect(() => {
+        const fam = FAMILY_DB.find(f => f.id === selectedFamilyId);
+        setSelectedFamily(fam);
+        setSamplingName(fam.parentName);
+        setSamplingRrn(fam.parentRrn);
+        setSamplingRelation(fam.relation);
+        setSamplingContact(fam.contact);
+        setFlyerAge(fam.missingAgeAtLoss);
+        setAgeProgressionPhoto(fam.childPhotoUrlAtLoss);
+        
+        // 상태 초기화
+        setPreCheckDone(false);
+        setPreCheckLog("");
+        setConsentDna(false);
+        setConsentDualData(false);
+        setConsentResample(false);
+        setReunionMatched(false);
+        clearSignature();
+      }, [selectedFamilyId]);
+
+      // --- AI 나이 변환 슬라이더 동적 연동 (WOW 기능) ---
+      useEffect(() => {
+        if (!selectedFamily) return;
+        const ageGap = flyerAge - selectedFamily.missingAgeAtLoss;
+        if (ageGap > 5) {
+          setAgeProgressionPhoto(selectedFamily.childPhotoUrlAgedUp);
+        } else {
+          setAgeProgressionPhoto(selectedFamily.childPhotoUrlAtLoss);
+        }
+      }, [flyerAge, selectedFamily]);
+
+      // --- 국과수 DNA 데이터베이스 대조 및 친족 상봉 매칭 시뮬레이터 ---
+      const handleRunDnaMatch = () => {
+        if (!preCheckDone || !consentDna || !signature) {
+          alert("사전 조회(제3항) 및 서면동의서 자필서명(제4항) 서명이 완료되어야만 정식 국과수 DNA 매칭 분석을 개시할 수 있습니다.");
+          return;
+        }
+
+        setDnaScanning(true);
+        setReunionMatched(false);
+
+        setTimeout(() => {
+          setDnaScanning(false);
+          setReunionMatched(true);
+          alert(`🚨 [DNA MATCH FOUND - 99.99%]\n\n국립과학수사연구원 유전자 감식 결과, ${selectedFamily.parentName} 님의 채취물과 아동 보호시설 입소자 무연고 무적자 '김성진'(발견 당시 7세)의 DNA 프로파일이 99.999% 일치하는 것으로 판명되었습니다!`);
+        }, 3000);
+      };
+
+      // --- 극적 상봉 완료에 따른 2024 개정 법 제13조 즉시 폐기 집행 ---
+      const handleReunionComplete = () => {
+        const confirmClear = confirm(`🎉 [친가족 상봉 완료 및 법정 데이터 즉시 폐기]\n\n상봉 완료에 따라 「실종아동법」 제13조 제2항 제1호(보호자 확인 시)에 의거하여, 국과수 보관 중인 모든 유전정보 및 검사대상물은 복원 불가능하게 즉시 지체 없이 파기되어야 합니다.\n\n즉시 폐기 집행 및 기록 등록을 실행하시겠습니까?`);
+        
+        if (confirmClear) {
+          setReunionMatched(false);
+          
+          // 파기대장 기록 보관 (2024 개정법 기준 반영)
+          const newLog = {
+            id: `DNA-DEL-${Math.floor(1000 + Math.random() * 9000)}`,
+            applicant: selectedFamily.parentName,
+            relation: selectedFamily.relation,
+            targetName: selectedCaseName(),
+            destroyedType: "검사대상물(타액 시료 - 국과수 제1항 완료폐기) 및 유전정보(DNA 수치 데이터 - 제2항1호)",
+            destroyedTime: new Date().toLocaleString(),
+            reason: "법 제13조 제2항 제1호 (실종아동등의 보호자가 확인된 경우 - 상봉 완료)",
+            method: "NFS 유전 데이터 로우 하드웨어 영구삭제(Wipe) 및 종이 동의서 파쇄 소각",
+            status: "영구 폐기(복구불가)"
+          };
+
+          setDestructionLogs(prev => [newLog, ...prev]);
+          setShowDestructionLog(true);
+
+          alert("🔒 [법령 준수 완료 - 유전자 정보 일괄 파기]\n1. 국과수 보관 타액 물리 시료 폐기 완료\n2. 국과수 중앙 DB 내 유전체 정보 영구 소멸 완료\n3. 법적 파기대장(시행령 제4조의5 제3항 만족)에 정상 등재 완료.");
+        }
+      };
+
+      // 대상자 이름 가져오기 헬퍼
+      const selectedCaseName = () => {
+        return selectedFamily ? selectedFamily.missingChildName : "미상";
+      };
+
+      // --- 심리/법률 원스톱 지원 신청서 기안 ---
+      const handleRegisterReferral = () => {
+        if (!referralMemo) return;
+        const newReferral = {
+          id: `REF-${Math.floor(1000 + Math.random() * 9000)}`,
+          type: supportType,
+          applicant: selectedFamily.parentName,
+          childName: selectedFamily.missingChildName,
+          date: new Date().toLocaleDateString(),
+          memo: referralMemo,
+          status: "아동권리보장원 접수 완료(송신)"
+        };
+
+        setSupportReferrals(prev => [newReferral, ...prev]);
+        alert(`✅ [원스톱 가족 지원 연계 완료]\n아동권리보장원 및 지자체 피해자지원팀으로 [${supportType}] 연계 협조 공문 송신이 완료되었습니다.`);
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col relative pb-10">
+          <div className="scan-line no-print"></div>
+
+          {/* --- HEADER --- */}
+          <header className="glass-panel no-print border-b border-police-neon/30 p-4 sticky top-0 z-40 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-police-neon/20 border border-police-neon rounded-full flex items-center justify-center text-police-accent text-xl font-bold shadow-[0_0_15px_rgba(20,184,166,0.5)]">
+                가족
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-wider text-white flex items-center gap-2">
+                  실종자 가족 지원 및 유전자 매칭 시스템
+                  <span className="text-xs bg-police-neon text-police-900 px-2 py-0.5 rounded-full font-black animate-pulse">
+                    FAMILY CARE ACTIVE
+                  </span>
+                </h1>
+                <p className="text-xs text-slate-400">
+                  국립과학수사연구원 DNA 이원화 매칭 & 실종아동법 제11조~제15조(유전자검사 및 파기) 엄격 적용
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button 
+                onClick={() => { setPrintModeType("consent"); setShowPrintModal(true); }}
+                className="px-4 py-2 bg-slate-800 border border-slate-700 text-slate-300 rounded text-xs font-bold"
+              >
+                🖨️ [별지 서식] 유전자 채취 동의서 출력
+              </button>
+              <button 
+                onClick={() => { setPrintModeType("flyer"); setShowPrintModal(true); }}
+                className="px-4 py-2 bg-police-pink hover:bg-pink-700 text-white rounded text-xs font-bold shadow-[0_0_12px_rgba(236,72,153,0.4)]"
+              >
+                🖼️ 실종자 벽보 전단지 인쇄
+              </button>
+            </div>
+          </header>
+
+          {/* --- MAIN GRID LAYOUT --- */}
+          <main className="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full flex-grow no-print">
+            
+            {/* ================= LEFT: DNA 채취 신청 및 동의 패널 (4/12) ================= */}
+            <section className="lg:col-span-4 flex flex-col gap-5">
+              
+              {/* 1. 가족 정보 매핑 */}
+              <div className="glass-panel rounded-xl p-4 border-l-4 border-police-neon">
+                <h3 className="text-xs font-bold text-police-accent mb-3 flex items-center gap-1.5">
+                  <span>👪</span> 1. 찾는 가족(신청자) 대상자 연동
+                </h3>
+                
+                <div className="space-y-2 text-xs">
+                  <label className="block text-slate-400 mb-1">장기 실종자 가족 선택</label>
+                  <select 
+                    className="w-full p-2 rounded glass-input"
+                    value={selectedFamilyId}
+                    onChange={(e) => setSelectedFamilyId(e.target.value)}
+                  >
+                    {FAMILY_DB.map(f => (
+                      <option key={f.id} value={f.id}>{f.parentName} ({f.relation}) - 찾는 아동: {f.missingChildName}</option>
+                    ))}
+                  </select>
+
+                  <div className="mt-2 bg-slate-900/60 p-2.5 rounded border border-slate-800 text-[11px] space-y-1">
+                    <div>실종아동: <strong className="text-white">{selectedFamily.missingChildName}</strong> (실종 당시 만 {selectedFamily.missingAgeAtLoss}세)</div>
+                    <div>실종 발생 연도: <strong>{selectedFamily.missingYear}년 (약 {2026 - selectedFamily.missingYear}년 경과)</strong></div>
+                    <div>보호자 인상착의 설명: <p className="text-slate-400 mt-0.5 leading-snug">{selectedFamily.specialFeatures}</p></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. 유전자 채취 법적 서식 작성실 */}
+              <div className="glass-panel rounded-xl p-4 border-l-4 border-amber-500">
+                <h3 className="text-xs font-bold text-amber-400 mb-3 flex items-center gap-1.5">
+                  <span>🧬</span> 2. 유전자 채취 등록 및 법적 동의서
+                </h3>
+
+                <div className="space-y-3 text-xs">
+                  {/* Step A: 사전 조회 의무 (제3항) */}
+                  <div className="border border-slate-800 p-2.5 rounded bg-slate-900/50">
+                    <span className="text-[10px] text-amber-400 font-bold block mb-1">⚖️ 법 제11조 제3항: DB 사전조회 의무 이행</span>
+                    <button 
+                      onClick={handlePreCheck}
+                      className="w-full py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded text-[10px] font-bold"
+                    >
+                      🧬 유전자 DB 사전 등록 여부 확인
+                    </button>
+                    {preCheckLog && (
+                      <p className="text-[9px] text-teal-400 leading-snug mt-1.5 font-mono">{preCheckLog}</p>
+                    )}
+                  </div>
+
+                  {/* Step B: 채취 및 동의 서식 */}
+                  <div className={preCheckDone ? "space-y-3" : "opacity-30 pointer-events-none space-y-3"}>
+                    <div>
+                      <label className="block text-slate-400 mb-1">채취 대상자 성명 (RRN)</label>
+                      <div className="flex gap-1">
+                        <input type="text" className="w-full p-1.5 rounded glass-input text-xs" value={samplingName} readOnly />
+                        <input type="text" className="w-full p-1.5 rounded glass-input text-xs font-mono" value={samplingRrn} readOnly />
+                      </div>
+                    </div>
+
+                    {/* 법적 3대 동의 체크 */}
+                    <div className="bg-slate-900/60 p-2.5 rounded border border-slate-800 space-y-1.5 text-[10px] text-slate-300">
+                      <span className="text-slate-400 font-bold block mb-1">📋 법정 동의 체크리스트 (제4항)</span>
+                      
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" checked={consentDna} onChange={(e) => setConsentDna(e.target.checked)} />
+                        <span>[필수] 유전자검사대상물(구강세포) 채취 및 검사동의</span>
+                      </label>
+                      
+                      <label className="flex items-center gap-1.5 cursor-pointer border-t border-slate-850 pt-1.5">
+                        <input type="checkbox" checked={consentDualData} onChange={(e) => setConsentDualData(e.target.checked)} />
+                        <span>[필수] 국과수(유전수치) - 보장원(인적) 정보 이원화 관리동의</span>
+                      </label>
+
+                      <label className="flex items-center gap-1.5 cursor-pointer border-t border-slate-850 pt-1.5">
+                        <input type="checkbox" checked={consentResample} onChange={(e) => setConsentResample(e.target.checked)} />
+                        <span>[선택] 시료 상태 부적합 시 재채취 협조 동의</span>
+                      </label>
+                    </div>
+
+                    {/* Signature Pad */}
+                    <div className="border border-slate-800 p-2 rounded bg-slate-950 flex flex-col items-center">
+                      <span className="text-[10px] text-slate-400 block mb-1">✍️ 자필 서명 (Mouse / Touch)</span>
+                      <canvas 
+                        ref={sigCanvasRef}
+                        width="240"
+                        height="80"
+                        onMouseDown={startDrawing}
+                        onMouseMove={draw}
+                        onMouseUp={stopDrawing}
+                        onMouseLeave={stopDrawing}
+                        className="bg-slate-900 border border-slate-800 rounded cursor-crosshair"
+                      />
+                      <div className="flex gap-2 w-full mt-1.5 justify-end">
+                        <button onClick={clearSignature} className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] text-slate-400">지우기</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </section>
+
+            {/* ================= MIDDLE: AI 나이 변환 전단지 제작소 (5/12) ================= */}
+            <section className="lg:col-span-5 flex flex-col gap-4">
+              <div className="glass-panel rounded-xl p-5 relative flex-grow flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-sm font-bold text-police-accent flex items-center gap-1">
+                    <span>🖼️</span> AI 나이 변환 실종 전단지 제작기 (Age Progression Poster)
+                  </h3>
+                  <span className="text-[10px] text-slate-400">아동권리보장원 전단지 제출 규격</span>
+                </div>
+
+                {/* AGE PROGRESSION INTERACTIVE SLIDER */}
+                <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-800 text-xs mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-slate-400">🕰️ 실종 당시 나이대비 **가상 나이 변환** 시뮬레이션</span>
+                    <strong className="text-police-pink text-sm animate-pulse">현재 {flyerAge}세 변환 중</strong>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] text-slate-500 font-mono">만 {selectedFamily.missingAgeAtLoss}세 (실종)</span>
+                    <input 
+                      type="range" 
+                      min={selectedFamily.missingAgeAtLoss}
+                      max={selectedFamily.missingAgeAtLoss + 15}
+                      className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-police-pink"
+                      value={flyerAge}
+                      onChange={(e) => setFlyerAge(parseInt(e.target.value))}
+                    />
+                    <span className="text-[10px] text-slate-500 font-mono">만 {selectedFamily.missingAgeAtLoss + 15}세 (성년)</span>
+                  </div>
+                </div>
+
+                {/* THE FLYER GRAPHIC COMPONENT (Styled as the real flyer) */}
+                <div className="border border-slate-700 bg-white text-black p-5 rounded-lg flex-grow flex flex-col justify-between max-w-[400px] mx-auto text-[10px] shadow-2xl relative">
+                  
+                  {/* Warning ribbon */}
+                  <div className="bg-red-600 text-white font-extrabold text-center py-1 text-xs tracking-widest font-serif mb-2.5">
+                    🚨 실종아동을 찾습니다! (국가 182 전파)
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 flex-grow">
+                    {/* Photo area */}
+                    <div className="col-span-5 flex flex-col items-center">
+                      <div className="w-full h-36 border border-gray-400 rounded bg-gray-100 flex items-center justify-center overflow-hidden relative">
+                        <img src={ageProgressionPhoto} className="object-cover w-full h-full" alt="나이 변환 사진" />
+                        {flyerAge > selectedFamily.missingAgeAtLoss && (
+                          <span className="absolute bottom-0 inset-x-0 bg-police-pink text-white font-bold text-[8px] text-center py-0.5">
+                            🧬 AI 나이 변환 몽타주
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[8px] text-gray-500 mt-1">실종일: {selectedFamily.missingYear}년</span>
+                    </div>
+
+                    {/* Details area */}
+                    <div className="col-span-7 space-y-1 text-gray-800 leading-snug">
+                      <div>성명: <strong className="text-black text-xs font-serif">{selectedFamily.missingChildName}</strong> (현재 만 {flyerAge}세 추정)</div>
+                      <div>성별: <strong>{selectedFamily.id.includes("098") ? "남성" : "여성"}</strong></div>
+                      <div>실종당시 신장: <strong>{selectedFamily.id.includes("098") ? "118cm" : "132cm"}</strong></div>
+                      <div>실종 장소: <p className="text-[9px] text-gray-600 leading-normal">{selectedFamily.id.includes("098") ? "서울 강남역 놀이터" : "부산 해운대 광장"}</p></div>
+                      <div>신체적 특징: <p className="text-[9px] text-gray-600 leading-normal">{selectedFamily.specialFeatures}</p></div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-dashed border-gray-400 pt-2.5 mt-2.5 flex justify-between items-center gap-3">
+                    <div className="text-left leading-normal text-[8px] text-gray-700">
+                      * 이 아동을 목격하거나 보호 중이신 분은 즉시 **국번 없이 182** 또는 경찰청 실종아동찾기 센터로 신고바랍니다.
+                    </div>
+                    {/* Simulated QR code */}
+                    <div className="w-10 h-10 border border-gray-400 flex items-center justify-center bg-gray-100 text-[8px] font-bold text-center">
+                      QR<br/>제보
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </section>
+
+            {/* ================= RIGHT: DNA MATCH &Referral referrals (3/12) ================= */}
+            <section className="lg:col-span-3 flex flex-col gap-5">
+
+              {/* 3. 국과수 DNA 매칭 분석실 */}
+              <div className="glass-panel rounded-xl p-4 border-t-4 border-police-neon flex flex-col justify-between min-h-[280px]">
+                <div>
+                  <h3 className="text-xs font-bold text-police-accent mb-3 flex items-center gap-1.5">
+                    <span>🧬</span> 4. 국과수 DNA 친족 매칭 분석실
+                  </h3>
+
+                  {dnaScanning ? (
+                    <div className="py-8 text-center flex flex-col items-center justify-center relative">
+                      <div className="w-16 h-16 border-4 border-police-neon border-t-transparent rounded-full animate-spin mb-4"></div>
+                      <span className="text-xs text-police-accent font-bold animate-pulse font-mono">DNA SPIRAL SCANNING...</span>
+                    </div>
+                  ) : (
+                    <div>
+                      {reunionMatched ? (
+                        <div className="space-y-3">
+                          <div className="bg-police-pink/20 border border-police-pink p-3 rounded-lg text-xs text-police-pink font-bold animate-pulse text-center">
+                            🚨 [DNA MATCH FOUND - 99.999%]
+                            <p className="text-[10px] text-slate-300 mt-1 font-normal font-sans">실종자 {selectedFamily.missingChildName} 님과 가족 일치 판정!</p>
+                          </div>
+                          <div className="bg-slate-900/60 p-2.5 border border-slate-800 rounded text-[10px] text-slate-400 leading-snug">
+                            🎉 <strong>감동적인 가족 상봉 실현!</strong> 10년이 넘는 세월 끝에 DNA 매칭 시스템을 통해 무연고 시설 거주 아동과의 친자 관계가 규명되었습니다.
+                          </div>
+                          <button 
+                            onClick={handleReunionComplete}
+                            className="w-full py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-xs transition"
+                          >
+                            🎉 가족 상봉 완료 및 유전자 영구 폐기 (의무)
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 text-xs text-slate-500">
+                          <div className="w-20 h-20 mx-auto opacity-40 border border-slate-700 rounded-full flex items-center justify-center mb-3">
+                            🧬
+                          </div>
+                          사전동의서 서명이 완료되면 국과수 DB와의 실시간 친족 데이터 비교 대조를 실행할 수 있습니다.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {!reunionMatched && !dnaScanning && (
+                  <button 
+                    onClick={handleRunDnaMatch}
+                    disabled={!consentDna || !signature}
+                    className={`w-full py-2.5 rounded text-xs font-black text-white transition ${!consentDna || !signature ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700' : 'bg-police-neon hover:bg-teal-600 shadow-[0_0_12px_rgba(20,184,166,0.4)] animate-pulse'}`}
+                  >
+                    🧬 국과수 DNA 매칭 스캔 개시
+                  </button>
+                )}
+              </div>
+
+              {/* 4. 심리·법률·재정 원스톱 연계 */}
+              <div className="glass-panel rounded-xl p-4 border-t-4 border-police-pink flex flex-col justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-police-pink mb-3 flex items-center gap-1.5">
+                    <span>❤️</span> 5. 가족 심리 및 법률·행정 지원실
+                  </h3>
+
+                  <div className="space-y-3 text-xs">
+                    <div>
+                      <label className="block text-slate-400 mb-1">지원 신청 분류</label>
+                      <select 
+                        className="w-full p-2 rounded glass-input text-xs"
+                        value={supportType}
+                        onChange={(e) => setSupportType(e.target.value)}
+                      >
+                        <option value="심리치료">❤️ 트라우마 심리 치료 연계</option>
+                        <option value="법률지원(실종선고)">⚖️ 민법상 실종선고 절차 지원</option>
+                        <option value="자조모임">👥 실종가족 자조모임 등록</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 mb-1">연계 협조 사항 기술</label>
+                      <textarea 
+                        className="w-full p-2 rounded glass-input text-[11px]" 
+                        rows="3" 
+                        value={referralMemo}
+                        onChange={(e) => setReferralMemo(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={handleRegisterReferral}
+                  className="w-full py-2 mt-4 bg-police-pink/80 hover:bg-police-pink text-white font-bold rounded text-xs transition"
+                >
+                  ✉️ 아동권리보장원 공문 이송 기안
+                </button>
+              </div>
+
+            </section>
+
+          </main>
+
+          {/* --- BOTTOM PROCESSED REFERRALS --- */}
+          <footer className="max-w-7xl mx-auto px-4 mt-6 w-full no-print">
+            
+            {/* Referral history */}
+            <div className="glass-panel rounded-xl p-4 border-l-4 border-police-pink mb-6">
+              <h3 className="font-bold text-police-pink flex items-center gap-1.5 text-xs mb-3">
+                <span>⏱️</span> 가족 원스톱 서비스 신청 및 연계 이력대장 (Support Referral Registers)
+              </h3>
+              <div className="space-y-2 text-xs">
+                {supportReferrals.length > 0 ? (
+                  supportReferrals.map((ref) => (
+                    <div key={ref.id} className="flex justify-between items-center border-b border-slate-800/60 pb-2">
+                      <div>
+                        <strong className="text-white">[{ref.type}] {ref.applicant} 님 (대상자: {ref.childName})</strong>
+                        <p className="text-slate-400 text-[10px] mt-0.5">{ref.memo}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-teal-400 font-bold block">{ref.status}</span>
+                        <span className="text-[9px] text-slate-500 font-mono">{ref.date}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-slate-500 text-[11px] py-4">현재 접수된 연계 지원 기안이 없습니다.</p>
+                )}
+              </div>
+            </div>
+
+            {/* DNA destruction log (Article 13 compliance) */}
+            <div className="glass-panel rounded-xl p-5 border-l-4 border-green-500">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-green-400 flex items-center gap-1.5 text-sm">
+                  <span>🔒</span> 유전자정보 및 시료 폐기 대장 [실종아동법 제13조 및 시행령 제4조의5 제3항 만족]
+                </h3>
+                <span className="text-[10px] text-slate-400">보존 기간: 영구 (국과수 연동 장부)</span>
+              </div>
+
+              <div className="overflow-x-auto text-[11px]">
+                <table className="w-full text-slate-300 border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-slate-700 bg-slate-900/60 text-slate-400">
+                      <th className="p-2">폐기 대장일련번호</th>
+                      <th className="p-2">가족코드 ID</th>
+                      <th className="p-2">신청 보호자명</th>
+                      <th className="p-2">관계</th>
+                      <th className="p-2">폐기 대상 정보</th>
+                      <th className="p-2">폐기 사유 (법 제13조제2항)</th>
+                      <th className="p-2">기술적 파기 처리법</th>
+                      <th className="p-2 text-green-400">파기 상태</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {destructionLogs.length > 0 ? (
+                      destructionLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-slate-800/20">
+                          <td className="p-2 font-mono">{log.id}</td>
+                          <td className="p-2 font-mono">{log.applicant}</td>
+                          <td className="p-2 font-bold text-white">{log.applicant}</td>
+                          <td className="p-2">{log.relation}</td>
+                          <td className="p-2 text-slate-400">{log.destroyedType}</td>
+                          <td className="p-2 text-[10px] text-amber-400 leading-snug">{log.reason}</td>
+                          <td className="p-2 text-slate-400">{log.method}</td>
+                          <td className="p-2 font-bold text-green-400">{log.status}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="8" className="p-8 text-center text-slate-500 text-xs">
+                          현재 가족 상봉 및 요청에 의한 유전자 파기 이력이 존재하지 않습니다.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </footer>
+
+          {/* ========================================================
+              MODAL: 인쇄용 미리보기 (별지 제2호서식 동의서 또는 전단지 세로벽보 규격)
+              ======================================================== */}
+          {showPrintModal && (
+            <div className="fixed inset-0 bg-black/90 z-50 overflow-y-auto p-4 flex flex-col items-center justify-start no-print">
+              <div className="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-xl p-4 mb-4 flex justify-between items-center">
+                <span className="text-sm font-bold text-white flex items-center gap-1.5">
+                  🖨️ {printModeType === "flyer" ? "[실종자 찾기 전단지] 세로 단면 벽보 인쇄" : "[별지 제2호서식] 유전자채취 대상자 신상카드 및 동의서 인쇄"}
+                </span>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold"
+                  >
+                    지금 인쇄하기 (Print)
+                  </button>
+                  <button 
+                    onClick={() => setShowPrintModal(false)}
+                    className="px-4 py-2 bg-slate-800 text-slate-300 rounded text-xs hover:bg-slate-700"
+                  >
+                    미리보기 닫기
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Document Container (A4 sheet styled) */}
+              <div className="w-full max-w-[210mm] min-h-[297mm] bg-white text-black p-12 shadow-2xl rounded border border-slate-300 text-xs">
+                
+                {printModeType === "flyer" ? (
+                  /* ============= FLYER PRINT MODE ============= */
+                  <div className="flex flex-col justify-between min-h-[260mm] p-6 border-8 border-red-650 text-center relative">
+                    
+                    <div className="bg-red-600 text-white font-extrabold text-2xl py-3 tracking-widest font-serif mb-6 shadow-md">
+                      🚨 실종아동을 찾습니다! (182 제보)
+                    </div>
+
+                    <div className="grid grid-cols-12 gap-6 items-center flex-grow">
+                      {/* Photo */}
+                      <div className="col-span-6 flex flex-col items-center">
+                        <div className="w-full h-72 border-2 border-gray-400 rounded bg-gray-100 flex items-center justify-center overflow-hidden shadow-sm">
+                          <img src={ageProgressionPhoto} className="object-cover w-full h-full" alt="전단지 사진" />
+                        </div>
+                        {flyerAge > selectedFamily.missingAgeAtLoss && (
+                          <div className="bg-police-pink text-white font-bold text-[10px] text-center py-1 mt-1.5 rounded w-full shadow-sm">
+                            🧬 AI 나이 변환 복원 몽타주 (현재 {flyerAge}세 추정)
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Details */}
+                      <div className="col-span-6 text-left space-y-3 text-gray-800 leading-loose text-sm pl-4 font-sans">
+                        <div>성명: <strong className="text-black text-lg font-serif">{selectedFamily.missingChildName}</strong> (현재 만 {flyerAge}세 추정)</div>
+                        <div>성별: <strong>{selectedFamily.id.includes("098") ? "남성" : "여성"}</strong></div>
+                        <div>실종일자: <strong>{selectedFamily.missingYear}년</strong></div>
+                        <div>실종당시 신장: <strong>{selectedFamily.id.includes("098") ? "118cm" : "132cm"}</strong></div>
+                        <div>실종 당시 장소: <p className="text-xs text-gray-600 leading-normal font-bold">{selectedFamily.id.includes("098") ? "서울 강남역 3번출구 놀이터" : "부산 해운대 해수욕장 입구 광장"}</p></div>
+                        <div>신체적 특징: <p className="text-xs text-gray-600 leading-normal">{selectedFamily.specialFeatures}</p></div>
+                      </div>
+                    </div>
+
+                    <div className="border-t-2 border-dashed border-gray-400 pt-6 mt-6 flex justify-between items-center gap-6">
+                      <div className="text-left leading-normal text-xs text-gray-700 font-bold">
+                        * 이 아동을 목격하거나 보호 중이신 분은 즉시 **국번 없이 182** 또는 경찰청 실종아동찾기 센터(112)로 긴급히 제보해 주시기 바랍니다. 시민 여러분의 소중한 관심이 아이를 돌려보냅니다.
+                      </div>
+                      <div className="w-16 h-16 border border-gray-450 flex items-center justify-center bg-gray-100 text-xs font-bold text-center">
+                        QR코드<br/>제보
+                      </div>
+                    </div>
+
+                  </div>
+                ) : (
+                  /* ============= CONSENT PRINT MODE (별지 제2호서식) ============= */
+                  <div>
+                    <div className="flex justify-between items-end border-b border-black pb-2 mb-4">
+                      <span className="text-[10px] text-gray-600">[별지 제2호서식] &lt;개정 2015. 9. 22.&gt;</span>
+                      <span className="text-[10px] text-gray-600">실종아동등의 보호 및 지원에 관한 법률 시행규칙</span>
+                    </div>
+
+                    <div className="border-4 border-black p-4 text-center my-6">
+                      <h1 className="text-2xl font-extrabold tracking-widest font-serif">신상카드 및 유전자검사동의서</h1>
+                    </div>
+
+                    <h3 className="font-bold text-sm mb-1.5 font-serif">■ 채취 신청 보호자 인적사항</h3>
+                    <table className="w-full border-collapse border-2 border-black mb-4 text-xs">
+                      <tbody>
+                        <tr>
+                          <td className="border border-black bg-gray-100 p-2 font-bold w-28 text-center">성명 (한글)</td>
+                          <td className="border border-black p-2 w-44 font-bold">{samplingName}</td>
+                          <td className="border border-black bg-gray-100 p-2 font-bold w-28 text-center">신청자와의 관계</td>
+                          <td className="border border-black p-2">{samplingRelation}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-black bg-gray-100 p-2 font-bold text-center">주민등록번호</td>
+                          <td className="border border-black p-2 font-mono">{samplingRrn}</td>
+                          <td className="border border-black bg-gray-100 p-2 font-bold text-center">연락처</td>
+                          <td className="border border-black p-2 font-mono">{samplingContact}</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-black bg-gray-100 p-2 font-bold text-center">주소</td>
+                          <td className="border border-black p-2" colSpan="3">{selectedFamily.address}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <h3 className="font-bold text-sm mb-1.5 font-serif">■ 찾는 실종아동등 인적 정보</h3>
+                    <table className="w-full border-collapse border-2 border-black mb-4 text-xs">
+                      <tbody>
+                        <tr>
+                          <td className="border border-black bg-gray-100 p-2 font-bold w-28 text-center">아동 성명</td>
+                          <td className="border border-black p-2 w-44 font-bold">{selectedFamily.missingChildName}</td>
+                          <td className="border border-black bg-gray-100 p-2 font-bold w-28 text-center">실종 당시 연령</td>
+                          <td className="border border-black p-2">만 {selectedFamily.missingAgeAtLoss}세 (실종연도: {selectedFamily.missingYear}년)</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-black bg-gray-100 p-2 font-bold text-center">주요 특징</td>
+                          <td className="border border-black p-2" colSpan="3">{selectedFamily.specialFeatures}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <h3 className="font-bold text-sm mb-1.5 font-serif">■ 법적 유전자검사 채취 및 보관 동의사항</h3>
+                    <div className="border border-black p-4 leading-loose text-[10px] space-y-2 font-sans mb-6">
+                      <div>
+                        [ ✔ ] <strong>유전자검사대상물(타액/구강세포) 채취 및 검사동의:</strong> 「실종아동등의 보호 및 지원에 관한 법률」 제11조제4항에 의거하여 구강세포 채취 및 유전자 검사에 기각 없이 동의합니다.
+                      </div>
+                      <div>
+                        [ ✔ ] <strong>정보의 가상 이원화 보관 동의(법 제11조제5항):</strong> 개인정보 누출 방지를 위해 유전 수치는 국립과학수사연구원(검사기관)이 보관하고 신상정보는 아동권리보장원(전문기관)이 분리 보관하는 구조에 동의합니다.
+                      </div>
+                      <div>
+                        [ ✔ ] <strong>재채취 협조 동의(시행령 제7조):</strong> 채취물 상태 부적합 또는 판독 불능으로 인한 국과수의 재채취 요구 시 성실히 협조할 것을 동의합니다.
+                      </div>
+                    </div>
+
+                    {/* Signature block with generated signature image */}
+                    <div className="flex justify-between items-center my-8 font-serif">
+                      <div className="font-bold text-sm">
+                        신청인 성명: ____________________ (서명)
+                      </div>
+                      <div className="w-44 h-16 border border-gray-400 flex flex-col items-center justify-center p-1 bg-gray-50 relative">
+                        <span className="text-[7px] text-gray-500 absolute top-0.5">전자 서명 이미지</span>
+                        {signature ? (
+                          <img src={signature} className="w-full h-full object-contain" alt="자필 서명" />
+                        ) : (
+                          <span className="text-[9px] text-gray-400">서명 미날인</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-center my-10 font-bold leading-loose text-sm font-serif">
+                      「실종아동등의 보호 및 지원에 관한 법률」 제11조제4항 및 같은 법 시행규칙 제5조에 따라<br/>
+                      위와 같이 유전자검사를 신청하며 검사대상물 채취에 적법하게 동의합니다.
+                    </div>
+
+                    <div className="text-right my-6 font-bold text-sm font-serif">
+                      {new Date().getFullYear()}년 {String(new Date().getMonth() + 1).padStart(2, '0')}월 {String(new Date().getDate()).padStart(2, '0')}일
+                    </div>
+
+                    <div className="flex justify-between items-center font-bold text-base my-8 font-serif">
+                      <span>관할 경찰관서의 장 / 검사기관의 장 귀하</span>
+                      <span className="text-lg">직인생략</span>
+                    </div>
+
+                  </div>
+                )}
+
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<FamilySupportApp />);
+  </script>
+</body>
+</html>

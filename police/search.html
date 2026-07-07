@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>실종아동 격자 수색 시뮬레이션 및 초동수색 제안 시스템</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS config for customized police dashboard palette (Green/Emerald theme for Search Operations) -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            police: {
+              900: '#0b0f19',
+              800: '#111827',
+              700: '#1f2937',
+              600: '#374151',
+              blue: '#1e3a8a',
+              neon: '#10b981', // Emerald/Green glow for search operations
+              accent: '#34d399',
+              amber: '#f59e0b',
+              crimson: '#ef4444',
+              indigo: '#6366f1'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- React & ReactDOM (React 18) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <!-- Babel Compiler for in-browser JSX parsing -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin="anonymous"></script>
+  
+  <!-- Google Fonts: Inter & Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0b0f19;
+      color: #e5e7eb;
+      overflow-x: hidden;
+    }
+    
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b0f19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f2937;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #10b981;
+    }
+
+    /* Glassmorphism utility */
+    .glass-panel {
+      background: rgba(17, 24, 39, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(16, 185, 129, 0.15); /* Emerald border */
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    
+    .glass-input {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #f3f4f6;
+      transition: all 0.2s ease-in-out;
+    }
+    
+    .glass-input:focus {
+      border-color: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+      outline: none;
+    }
+
+    .neon-text-glow {
+      text-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    }
+
+    .neon-border-glow:hover {
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    /* Radar Sweeping Animation */
+    @keyframes radar-sweep {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .radar-beam {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: conic-gradient(from 0deg at 50% 50%, rgba(16, 185, 129, 0.2) 0deg, rgba(16, 185, 129, 0) 180deg);
+      border-radius: 8px;
+      pointer-events: none;
+      animation: radar-sweep 3s linear infinite;
+    }
+
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        font-family: 'Batang', 'Times New Roman', serif !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-area {
+        display: block !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- React root mount point -->
+  <div id="root"></div>
+
+  <!-- Core App Code in Babel JSX -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- PRE-LOADED CASES FOR REFERENCE (1~2단계 연계용 사건 DB) ---
+    const MOCK_CASES = [
+      {
+        id: "2026-MP-098234",
+        name: "김민우",
+        age: 7,
+        gender: "남",
+        type: "아동 (가목)",
+        missingLoc: "서울 강남역 3번출구 놀이터",
+        otherFeatures: "만 7세 아동. 활달하고 뽀로로를 극히 선호함."
+      },
+      {
+        id: "2026-MP-154930",
+        name: "이하은",
+        age: 11,
+        gender: "여",
+        type: "아동 (가목)",
+        missingLoc: "부산 해운대 해수욕장 입구 광장",
+        otherFeatures: "만 11세 아동. 지리 미숙하며 왼손잡이임."
+      },
+      {
+        id: "2026-MP-982134",
+        name: "박진우",
+        age: 30,
+        gender: "남",
+        type: "지적장애인 (나목)",
+        missingLoc: "인천 구월동 빌라 골목",
+        otherFeatures: "중증 지적장애. 자기 이름을 반복함. 다리 약간 절뚝임."
+      },
+      {
+        id: "2026-MP-445832",
+        name: "최순임",
+        age: 81,
+        gender: "여",
+        type: "치매환자 (다목)",
+        missingLoc: "경기 수원역 동측 광장 버스정류장",
+        otherFeatures: "치매 고령층. 고향(안동)으로 가는 버스를 타려 함."
+      }
+    ];
+
+    // --- MOCK DISTRICT MULTI-USE FACILITIES DATABASE (코드 아담 지도·감독용 DB - 법 제9조의4) ---
+    const MOCK_FACILITIES = [
+      { id: "FAC-001", name: "스타필드 코엑스몰", type: "대규모점포", manager: "이지훈", contact: "02-6002-1234", trainingStatus: "완료", lastTrainingDate: "2026-03-12", auditStatus: "이행", sizeSqm: 115000 },
+      { id: "FAC-002", name: "롯데백화점 강남점", type: "대규모점포", manager: "최진혁", contact: "02-531-2500", trainingStatus: "미완료", lastTrainingDate: "2025-05-18", auditStatus: "이행", sizeSqm: 28000 },
+      { id: "FAC-003", name: "메가박스 코엑스", type: "공연장/영화관", manager: "김서연", contact: "1544-0070", trainingStatus: "완료", lastTrainingDate: "2026-04-05", auditStatus: "이행", sizeSqm: 12000 },
+      { id: "FAC-004", name: "테마파크 키자니아 서울", type: "테마파크 (개정법)", manager: "박성호", contact: "1544-5110", trainingStatus: "미완료", lastTrainingDate: "2025-02-10", auditStatus: "미이행", sizeSqm: 10500 },
+      { id: "FAC-005", name: "서울메트로 강남역사", type: "도시철도 역사", manager: "한상우", contact: "02-6110-222", trainingStatus: "완료", lastTrainingDate: "2026-01-20", auditStatus: "이행", sizeSqm: 8500 }
+    ];
+
+    function SearchApp() {
+      // --- APP STATE ---
+      const [selectedCaseId, setSelectedCaseId] = useState(MOCK_CASES[0].id);
+      const [selectedCase, setSelectedCase] = useState(MOCK_CASES[0]);
+      const [terrainType, setTerrainType] = useState("임야/야산"); // 임야/야산, 하천/수변, 도심지, 복합쇼핑몰
+      
+      // 가용 수색 자원
+      const [policeUnits, setPoliceUnits] = useState(30); // 기동대 (명)
+      const [searchDogs, setSearchDogs] = useState(3); // 수색견 (두)
+      const [thermalDrones, setThermalDrones] = useState(2); // 열화상 드론 (대)
+      const [volunteers, setVolunteers] = useState(15); // 민간 방범대 (명)
+
+      // 격자 데이터 (8x8 배열)
+      const [gridData, setGridData] = useState([]);
+      const [selectedCell, setSelectedCell] = useState(null); // { r, c }
+
+      // 시뮬레이터 구동 상태
+      const [isSimulating, setIsSimulating] = useState(false);
+      const [simulationRadar, setSimulationRadar] = useState(false);
+      const [simulationLogs, setSimulationLogs] = useState([]);
+      
+      // 코드 아담 (다중이용시설) 모듈 상태 (법 제9조의4)
+      const [codeAdamActive, setCodeAdamActive] = useState(false);
+      const [codeAdamTimer, setCodeAdamTimer] = useState(600); // 10분 (600초)
+      const [codeAdamChecklist, setCodeAdamChecklist] = useState({
+        step1: false, // 경보방송 송출
+        step2: false, // 출입구 감시 배치
+        step3: false, // CCTV 집중 모니터링
+        step4: false, // 직원 합동 수색 개시
+        step5: false, // 경찰 긴급 신고
+        step6: false  // 발견 경보 해제
+      });
+      const [facilitiesList, setFacilitiesList] = useState(MOCK_FACILITIES);
+
+      // 인쇄용 모달 상태
+      const [showPrintModal, setShowPrintModal] = useState(false);
+
+      const timerRef = useRef(null);
+
+      // --- INITIALIZE GRID BASED ON TERRAIN AND CASE PROFILE ---
+      useEffect(() => {
+        const activeCase = MOCK_CASES.find(c => c.id === selectedCaseId);
+        setSelectedCase(activeCase);
+        generateGrid(terrainType, activeCase);
+      }, [selectedCaseId, terrainType]);
+
+      // 격자 생성 함수
+      const generateGrid = (terrain, activeCase) => {
+        const rows = 8;
+        const cols = 8;
+        let newGrid = [];
+
+        for (let r = 0; r < rows; r++) {
+          let row = [];
+          for (let c = 0; c < cols; c++) {
+            const coord = `${String.fromCharCode(65 + r)}${c + 1}`; // A1 ~ H8
+            let cellTerrain = "평탄지";
+            let basePoa = 1.0; // 기본 존재 확률 %
+
+            // 지형에 따른 격자 구성
+            if (terrain === "임야/야산") {
+              if ((r === 1 && c === 2) || (r === 2 && c === 3) || (r === 0 && c === 3)) {
+                cellTerrain = "⛰️ 밀집 산림";
+                basePoa = activeCase.name === "최순임" ? 1.5 : 2.5; // 어린이가 산으로 올라가는 PoA 가중치
+              } else if (r === 5 || r === 6) {
+                cellTerrain = "🍂 급경사지/계곡";
+                basePoa = activeCase.name === "최순임" ? 3.0 : 1.5; // 치매 노인이 계곡 아래로 내려앉는 경향
+              } else if (r === 3 && c === 3) {
+                cellTerrain = "📍 최후 목격지 (LKP)";
+                basePoa = 8.0;
+              } else {
+                cellTerrain = "일반 야산";
+                basePoa = 1.2;
+              }
+            } else if (terrain === "하천/수변공원") {
+              // 물줄기 흐름 격자화
+              if (c === 4 || (r === 3 && c === 3) || (r === 4 && c === 5)) {
+                cellTerrain = "🌊 깊은 하천 채널";
+                basePoa = (activeCase.name === "최순임" || activeCase.age < 8) ? 4.5 : 1.2; // 치매/유아는 하천변 존재 위험 극대화
+              } else if (c === 5 || c === 3) {
+                cellTerrain = "🌾 수변 습지/갈대밭";
+                basePoa = 2.0;
+              } else if (r === 1 && c === 1) {
+                cellTerrain = "📍 최후 목격지 (LKP)";
+                basePoa = 6.0;
+              } else {
+                cellTerrain = "잔디 수변광장";
+                basePoa = 1.0;
+              }
+            } else if (terrain === "도심지") {
+              if (r === 2 || c === 5) {
+                cellTerrain = "🛣️ 8차선 대로변";
+                basePoa = activeCase.age < 8 ? 0.8 : 2.5; // 지적장애/청소년의 대로변 이동 가중치
+              } else if (r === 4 && c === 4) {
+                cellTerrain = "📍 최후 목격지 (LKP)";
+                basePoa = 7.0;
+              } else if (r === 0 || r === 7) {
+                cellTerrain = "🏬 상가 번화가";
+                basePoa = activeCase.name === "김민우" ? 3.0 : 1.5; // 어린이는 장난감 가게/편의점 선호
+              } else {
+                cellTerrain = "일반 주택가";
+                basePoa = 1.0;
+              }
+            } else if (terrain === "복합쇼핑몰") {
+              // 코드 아담 관련 격자화
+              if (r === 0 || r === 7 || c === 0 || c === 7) {
+                cellTerrain = "🚪 외부 출출입구";
+                basePoa = 2.0;
+              } else if (r === 3 && c === 3) {
+                cellTerrain = "📍 최초 소실 지점";
+                basePoa = 10.0;
+              } else if (r === 1 || r === 5) {
+                cellTerrain = "🛍️ 쇼핑/매장 구역";
+                basePoa = 2.5;
+              } else {
+                cellTerrain = "🏢 공용 로비/식당가";
+                basePoa = 1.5;
+              }
+            }
+
+            row.push({
+              coord: coord,
+              row: r,
+              col: c,
+              terrain: cellTerrain,
+              poa: basePoa, // 존재 확률
+              pod: 0,       // 발견 확률
+              pos: 0,       // 수색 성공률 (PoS = PoA * PoD)
+              resources: {
+                police: 0,
+                dogs: 0,
+                drones: 0,
+                volunteers: 0
+              }
+            });
+          }
+          newGrid.push(row);
+        }
+
+        // 전체 존재 확률 합산하여 100% 비율 정규화 (과학적 엄밀성)
+        normalizePoa(newGrid);
+        setGridData(newGrid);
+      };
+
+      // POA 정규화
+      const normalizePoa = (grid) => {
+        let total = 0;
+        grid.forEach(row => row.forEach(cell => { total += cell.poa; }));
+        grid.forEach(row => row.forEach(cell => {
+          cell.poa = parseFloat(((cell.poa / total) * 100).toFixed(2));
+        }));
+      };
+
+      // 격자별 자원 투입 및 실시간 과학적 PoD/PoS 연산
+      const deployResource = (type, amount) => {
+        if (!selectedCell) return;
+        const { r, c } = selectedCell;
+
+        // 자원 가용량 한계 검증
+        if (type === "police" && amount > policeUnits) { alert("가용 경찰 기동대 인원을 초과했습니다."); return; }
+        if (type === "dogs" && amount > searchDogs) { alert("가용 수색견 두수를 초과했습니다."); return; }
+        if (type === "drones" && amount > thermalDrones) { alert("가용 열화상 드론 대수를 초과했습니다."); return; }
+        if (type === "volunteers" && amount > volunteers) { alert("가용 민간 방범대 인원을 초과했습니다."); return; }
+
+        const updatedGrid = [...gridData];
+        const cell = updatedGrid[r][c];
+
+        // 기존 배치 반환 후 재배치
+        if (type === "police") { setPoliceUnits(prev => prev + cell.resources.police - amount); cell.resources.police = amount; }
+        if (type === "dogs") { setSearchDogs(prev => prev + cell.resources.dogs - amount); cell.resources.dogs = amount; }
+        if (type === "drones") { setThermalDrones(prev => prev + cell.resources.drones - amount); cell.resources.drones = amount; }
+        if (type === "volunteers") { setVolunteers(prev => prev + cell.resources.volunteers - amount); cell.resources.volunteers = amount; }
+
+        // --- 과학적 발견 확률(PoD) 수학 연산식 적용 (지형별 자원 효과 차별화) ---
+        // 드론은 산림/계곡에 강점, 수색견은 우거진 갈대밭/수풀에 강점, 기동대는 건물/도심에 강점.
+        let pod = 0;
+        const pCount = cell.resources.police;
+        const dCount = cell.resources.drones;
+        const dogCount = cell.resources.dogs;
+        const vCount = cell.resources.volunteers;
+
+        if (cell.terrain.includes("산림") || cell.terrain.includes("경사지")) {
+          // 산림지대: 드론(개당 40%) > 수색견(마리당 30%) > 경찰(10명당 15%) > 방범대(10명당 5%)
+          pod = (dCount * 45) + (dogCount * 35) + (pCount * 1.8) + (vCount * 0.8);
+        } else if (cell.terrain.includes("하천") || cell.terrain.includes("습지")) {
+          // 하천/수변: 수색견(마리당 45%) > 드론(개당 30%) > 경찰(10명당 20%)
+          pod = (dogCount * 50) + (dCount * 30) + (pCount * 2.2) + (vCount * 1.0);
+        } else if (cell.terrain.includes("대로변") || cell.terrain.includes("상가") || cell.terrain.includes("출입구")) {
+          // 도심/건물: 경찰(10명당 35%) > 방범대(10명당 25%) > 수색견(15%) > 드론(무력화 5%)
+          pod = (pCount * 3.5) + (vCount * 2.5) + (dogCount * 15) + (dCount * 5);
+        } else {
+          // 일반지형
+          pod = (pCount * 2.5) + (dogCount * 25) + (dCount * 25) + (vCount * 1.5);
+        }
+
+        cell.pod = Math.round(Math.min(95, pod)); // 최대 발견 확률 한계 95% 설정 (불확실성 고려)
+        cell.pos = parseFloat(((cell.poa * cell.pod) / 100).toFixed(2)); // PoS = PoA * PoD
+
+        setGridData(updatedGrid);
+      };
+
+      // 총합 PoS(수색 성공률) 계산
+      const calculateTotalPos = () => {
+        let total = 0;
+        gridData.forEach(row => row.forEach(cell => { total += cell.pos; }));
+        return parseFloat(total.toFixed(2));
+      };
+
+      // --- CODE ADAM TIMER & CHECKLIST (실종법 제9조의4 조기발견지침) ---
+      useEffect(() => {
+        if (codeAdamActive && codeAdamTimer > 0) {
+          timerRef.current = setInterval(() => {
+            setCodeAdamTimer(prev => {
+              if (prev <= 1) {
+                clearInterval(timerRef.current);
+                triggerCodeAdamPoliceAlert(); // 10분 초과 자동 경찰 긴급 신고 전송
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        }
+        return () => clearInterval(timerRef.current);
+      }, [codeAdamActive, codeAdamTimer]);
+
+      const startCodeAdam = () => {
+        setCodeAdamActive(true);
+        setCodeAdamTimer(600);
+        setCodeAdamChecklist(prev => ({ ...prev, step1: true, step2: true }));
+        alert("🚨 [코드 아담 경보 전면 발령]\n1. 시설 전체 실종 경보 방송 송출 개시\n2. 출입문 통제 및 경비 인력 출입구 감시 배치 완료\n3. 10분 내 미발견 시 경찰로 강제 즉시 신고 타이머가 시작됩니다.");
+      };
+
+      const triggerCodeAdamPoliceAlert = () => {
+        setCodeAdamChecklist(prev => ({ ...prev, step5: true }));
+        alert("🚨 [코드 아담 - 10분 골든타임 경과]\n실종아동등의 보호 및 지원에 관한 법률 제9조의4 제2항 제4호에 의거, 다중이용시설 내부 수색 중 10분이 경과하여 관할 경찰서로 실종 사건 정보가 즉시 강제 신고 이송되었습니다.");
+      };
+
+      // 다중이용시설 교육·훈련(제3항) 및 조치(제2항) 불이행 과태료 부과 시뮬레이션
+      const handleIssueFine = (facility) => {
+        let fine = "";
+        let clause = "";
+        if (facility.auditStatus === "미이행") {
+          fine = "500만원";
+          clause = "법 제9조의4제2항 위반 (실종신고 접수 시 즉각 경보발령 및 수색, 출입구 감시조치 미이행)";
+        } else {
+          fine = "200만원";
+          clause = "법 제9조의4제3항 위반 (연 1회 교육·훈련 미실시 또는 관할 경찰서 결과 보고 미이행)";
+        }
+
+        const confirmFine = confirm(`⚠️ [과태료 부과 처분 예고]\n\n대상 시설: ${facility.name} (면적: ${facility.sizeSqm.toLocaleString()}㎡)\n위반 유형: ${facility.auditStatus === "미이행" ? '조치 지침 불이행' : '교육훈련 미실시'}\n처분 수위: 과태료 ${fine} 부과\n\n해당 시설 관리주체에 행정처분 예고를 고지하시겠습니까?`);
+        
+        if (confirmFine) {
+          const updated = facilitiesList.map(item => {
+            if(item.id === facility.id) {
+              return { ...item, trainingStatus: "과태료 처분", auditStatus: "처분 완료" };
+            }
+            return item;
+          });
+          setFacilitiesList(updated);
+          alert(`✅ [지도감독 권한 집행 - 제9조의4제4항]\n${facility.name} 시설의 관리주체에게 ${clause}에 기초한 과태료 고지서가 성공적으로 송부되었습니다.`);
+        }
+      };
+
+      // --- 실시간 격자 수색 시뮬레이션 및 112 무전망 스트리밍 ---
+      const runSearchSimulation = () => {
+        setIsSimulating(true);
+        setSimulationRadar(true);
+        setSimulationLogs([]);
+
+        // 모의 수색 로그 타임라인
+        const logs = [
+          { time: "00:00", text: "📡 112 상황실 수색 지휘소 개설. 초동 자원 격자 배치 승인 완료." },
+          { time: "00:15", text: `🛸 드론 1·2호기 이륙 완료. LKP 주변 지형(POA 고밀도 구역) 중심 열화상 스캔 시작.` },
+          { time: "00:40", text: "🐶 119 인명구조 수색견 2개 파트 습지/갈대밭(B5, C5 구역) 정밀 탐색 진입." },
+          { time: "01:10", text: "👮 경찰 기동대 1소대, LKP 북동측 산악 등산로 진입로 봉쇄 및 도보 수색 개시." },
+          { time: "01:35", text: "⚠️ 드론 통제실 보고: C4(수변 습지 격자) 부근에서 체온과 유사한 온점 신호 식별! 수색견 긴급 좌표 유도." },
+          { time: "02:15", text: "🐶 [긴급 무전] 수색견 2호기, C4 늪지 수풀 주변에서 격렬하게 짖는 반응 발생! 시각 확인 조 급파." },
+          { time: "02:40", text: `🎉 [상황 해결] C4 구역 수변 갈대 구릉 속에서 실종대상자(${selectedCase.name}) 발견! 저체온증이 의심되나 생체 신호 양호. 119 구급대 압송 인계 중.` },
+          { time: "03:00", text: "🔒 발견 완료에 따른 수색 작전 종결. 전체 투입 요원 철수 지시." }
+        ];
+
+        let index = 0;
+        const interval = setInterval(() => {
+          if (index < logs.length) {
+            setSimulationLogs(prev => [...prev, logs[index]]);
+            index++;
+          } else {
+            clearInterval(interval);
+            setIsSimulating(false);
+            setSimulationRadar(false);
+            alert(`🎉 [수색 성공!]\n격자 C4 구역에서 실종자를 발견하였습니다.\n과학적 자원 배치로 수색 효율을 극대화하였습니다.`);
+          }
+        }, 1500);
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col relative pb-10">
+          
+          {/* --- HEADER --- */}
+          <header className="glass-panel no-print border-b border-police-neon/30 p-4 sticky top-0 z-40 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-police-neon/20 border border-police-neon rounded-full flex items-center justify-center text-police-accent text-xl font-bold shadow-[0_0_15px_rgba(16,185,129,0.5)]">
+                수색
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-wider text-white flex items-center gap-2">
+                  실종아동 격자 수색 시뮬레이션 및 초동수색 제안 시스템
+                  <span className="text-xs bg-police-neon text-police-900 px-2 py-0.5 rounded-full font-black animate-pulse">
+                    SAR RADAR ACTIVE
+                  </span>
+                </h1>
+                <p className="text-xs text-slate-400">
+                  수학적 SAR(Search & Rescue) 확률 대안 모델 & 실종아동법 제9조의4(조기발견지침) 완벽 연동
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowPrintModal(true)}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+              >
+                🖨️ [수색 작전 계획서] 인쇄 미리보기
+              </button>
+            </div>
+          </header>
+
+          {/* --- MAIN GRID LAYOUT --- */}
+          <main className="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full flex-grow no-print">
+            
+            {/* ================= LEFT: PROFILE & ENVIRONMENT PANEL (3/12) ================= */}
+            <section className="lg:col-span-3 flex flex-col gap-5">
+              
+              {/* 1. 실종 대상 사건 정보 연동 */}
+              <div className="glass-panel rounded-xl p-4 border-l-4 border-police-neon">
+                <h3 className="text-xs font-bold text-police-accent mb-3 flex items-center gap-1.5">
+                  <span>👤</span> 1. 실종 대상 사건 연동
+                </h3>
+                <div className="space-y-2 text-xs">
+                  <label className="block text-slate-400 mb-1">활성 실종 사건 선택</label>
+                  <select 
+                    className="w-full p-2 rounded glass-input"
+                    value={selectedCaseId}
+                    onChange={(e) => setSelectedCaseId(e.target.value)}
+                  >
+                    {MOCK_CASES.map(c => (
+                      <option key={c.id} value={c.id}>{c.name} ({c.gender}, 만 {c.age}세)</option>
+                    ))}
+                  </select>
+
+                  <div className="mt-3 bg-slate-900/60 p-2.5 rounded border border-slate-800 space-y-1.5">
+                    <div>접수번호: <strong className="text-white font-mono">{selectedCase.id}</strong></div>
+                    <div>인적분류: <strong>{selectedCase.type}</strong></div>
+                    <div>최초소실지: <p className="text-slate-400 mt-0.5 leading-snug">{selectedCase.missingLoc}</p></div>
+                    <div className="text-[10px] text-amber-400 font-semibold mt-1">※ 대상자 특징: {selectedCase.otherFeatures}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. 수색 환경 변수 설정 */}
+              <div className="glass-panel rounded-xl p-4 border-l-4 border-amber-500">
+                <h3 className="text-xs font-bold text-amber-400 mb-3 flex items-center gap-1.5">
+                  <span>🌦️</span> 2. 지형 환경 및 상황 변수
+                </h3>
+                
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-slate-400 mb-1">수색 지형 환경 선택</label>
+                    <select 
+                      className="w-full p-2 rounded glass-input"
+                      value={terrainType}
+                      onChange={(e) => setTerrainType(e.target.value)}
+                    >
+                      <option value="임야/야산">⛰️ 임야 / 야산 지대</option>
+                      <option value="하천/수변공원">🌊 하천 / 수변공원 지역</option>
+                      <option value="도심지">🏬 도심지 (상가/주택가)</option>
+                      <option value="복합쇼핑몰">🛍️ 복합쇼핑몰 (코드 아담 발령)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. 가용 수색 자원 상태 */}
+              <div className="glass-panel rounded-xl p-4 border-l-4 border-teal-500">
+                <h3 className="text-xs font-bold text-teal-400 mb-3 flex items-center gap-1.5">
+                  <span>🚒</span> 3. 초동 가용 수색 자원 현황
+                </h3>
+
+                <div className="space-y-3 text-xs font-mono">
+                  <div className="flex justify-between items-center bg-slate-900/60 p-2 rounded border border-slate-800">
+                    <span>👮 경찰 기동대 인원</span>
+                    <strong className="text-white text-sm">{policeUnits} 명</strong>
+                  </div>
+                  <div className="flex justify-between items-center bg-slate-900/60 p-2 rounded border border-slate-800">
+                    <span>🐶 119 인명 수색견</span>
+                    <strong className="text-teal-400 text-sm">{searchDogs} 두</strong>
+                  </div>
+                  <div className="flex justify-between items-center bg-slate-900/60 p-2 rounded border border-slate-800">
+                    <span>🛸 열화상 스캔 드론</span>
+                    <strong className="text-indigo-400 text-sm">{thermalDrones} 대</strong>
+                  </div>
+                  <div className="flex justify-between items-center bg-slate-900/60 p-2 rounded border border-slate-800">
+                    <span>👥 민간 자율 방범대</span>
+                    <strong className="text-amber-400 text-sm">{volunteers} 명</strong>
+                  </div>
+                </div>
+              </div>
+
+            </section>
+
+            {/* ================= MIDDLE: INTERACTIVE 전술 지도 (5/12) ================= */}
+            <section className="lg:col-span-6 flex flex-col gap-4">
+              <div className="glass-panel rounded-xl p-4 relative flex-grow flex flex-col">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-sm font-bold text-police-accent flex items-center gap-1">
+                    <span>🗺️</span> 전술 격자 수색 지도 (8x8 Grid Map)
+                  </h3>
+                  <span className="text-[10px] text-slate-400">격자 클릭 시 경찰력/드론 정밀 배치 가능</span>
+                </div>
+
+                {/* Simulated Grid Wrapper */}
+                <div className="relative border border-slate-700/60 rounded-lg p-2 bg-slate-950 flex-grow flex items-center justify-center min-h-[400px]">
+                  
+                  {simulationRadar && <div className="radar-beam"></div>}
+
+                  <div className="grid grid-cols-8 gap-1.5 w-full h-full max-w-[500px]">
+                    {gridData.map((row, r) => 
+                      row.map((cell, c) => {
+                        const isLkp = cell.terrain.includes("목격지") || cell.terrain.includes("소실");
+                        const hasResource = cell.resources.police > 0 || cell.resources.drones > 0 || cell.resources.dogs > 0;
+                        
+                        // 지형별 색상 클래스
+                        let terrainBg = "bg-slate-800/40 border-slate-700";
+                        if (cell.terrain.includes("산림")) terrainBg = "bg-emerald-950/60 border-emerald-800 text-emerald-300";
+                        else if (cell.terrain.includes("하천") || cell.terrain.includes("습지")) terrainBg = "bg-sky-950/70 border-sky-800 text-sky-300";
+                        else if (cell.terrain.includes("경사지")) terrainBg = "bg-amber-950/50 border-amber-800 text-amber-300";
+                        else if (isLkp) terrainBg = "bg-red-950 border-red-500 text-red-400 font-bold shadow-[0_0_10px_rgba(239,68,68,0.5)]";
+
+                        return (
+                          <div 
+                            key={`${r}-${c}`}
+                            onClick={() => setSelectedCell({ r, c })}
+                            className={`aspect-square flex flex-col justify-between p-1 border rounded text-[8px] cursor-pointer transition-all duration-150 hover:scale-105 hover:border-police-neon ${terrainBg} ${selectedCell?.r === r && selectedCell?.c === c ? 'ring-2 ring-police-accent border-police-accent shadow-[0_0_12px_rgba(16,185,129,0.6)]' : ''}`}
+                          >
+                            <div className="flex justify-between font-mono font-semibold">
+                              <span>{cell.coord}</span>
+                              <span className="text-[7px] text-slate-400">{cell.poa}%</span>
+                            </div>
+
+                            {/* Deployed icons */}
+                            <div className="flex justify-center gap-0.5 my-0.5 text-[9px] flex-wrap">
+                              {cell.resources.police > 0 && <span title="경찰">👮</span>}
+                              {cell.resources.drones > 0 && <span title="드론">🛸</span>}
+                              {cell.resources.dogs > 0 && <span title="수색견">🐶</span>}
+                              {cell.resources.volunteers > 0 && <span title="방범대">👥</span>}
+                            </div>
+
+                            <div className="text-right text-[7px] text-emerald-400 font-bold">
+                              {cell.pod > 0 ? `S:${cell.pos}%` : ""}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Selected Cell Resource Panel */}
+                {selectedCell && (
+                  <div className="mt-4 p-3 bg-slate-900 border border-slate-700/80 rounded-lg text-xs">
+                    {(() => {
+                      const cell = gridData[selectedCell.r][selectedCell.c];
+                      return (
+                        <div>
+                          <div className="flex justify-between items-center mb-2 text-police-accent font-bold">
+                            <span>📍 격자 구역: {cell.coord} ({cell.terrain})</span>
+                            <span className="text-slate-400">지형 고유 존재 확률(PoA): {cell.poa}%</span>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <div>
+                              <label className="block text-slate-400 mb-1">경찰 기동대 (명)</label>
+                              <input 
+                                type="number" 
+                                min="0" max="20"
+                                className="w-full p-1 rounded glass-input text-xs" 
+                                value={cell.resources.police}
+                                onChange={(e) => deployResource("police", parseInt(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-teal-400 mb-1">구조 수색견 (두)</label>
+                              <input 
+                                type="number" 
+                                min="0" max="2"
+                                className="w-full p-1 rounded glass-input text-xs" 
+                                value={cell.resources.dogs}
+                                onChange={(e) => deployResource("dogs", parseInt(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-indigo-400 mb-1">열화상 드론 (대)</label>
+                              <input 
+                                type="number" 
+                                min="0" max="2"
+                                className="w-full p-1 rounded glass-input text-xs" 
+                                value={cell.resources.drones}
+                                onChange={(e) => deployResource("drones", parseInt(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-amber-400 mb-1">민간 방범대 (명)</label>
+                              <input 
+                                type="number" 
+                                min="0" max="10"
+                                className="w-full p-1 rounded glass-input text-xs" 
+                                value={cell.resources.volunteers}
+                                onChange={(e) => deployResource("volunteers", parseInt(e.target.value) || 0)}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex justify-between items-center text-[11px] text-slate-300 border-t border-slate-800 pt-2 font-mono">
+                            <div>자원 배치에 따른 발견 확률 (PoD): <strong className="text-white">{cell.pod}%</strong></div>
+                            <div>격자 수색성공률 (PoS = PoA*PoD): <strong className="text-police-accent">{cell.pos}%</strong></div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* ================= RIGHT: SAR MATH & CODE ADAM CONTROLS (4/12) ================= */}
+            <section className="lg:col-span-3 flex flex-col gap-5">
+
+              {/* 1. SAR Math 통계 분석 & 시뮬레이션 개시 */}
+              <div className="glass-panel rounded-xl p-4 border-t-4 border-police-neon flex flex-col justify-between min-h-[300px]">
+                <div>
+                  <h3 className="text-xs font-bold text-police-accent mb-3 flex items-center gap-1.5">
+                    <span>📊</span> 4. 과학적 SAR 수색 정량 분석
+                  </h3>
+
+                  <div className="bg-slate-900/60 p-3 border border-slate-800 rounded-lg text-center mb-4">
+                    <div className="text-[10px] text-slate-400 block font-bold mb-1">총합 수색 성공률 (Total Area PoS)</div>
+                    <div className="text-3xl font-black text-police-accent tracking-widest font-mono animate-pulse">
+                      {calculateTotalPos()}%
+                    </div>
+                    <div className="text-[9px] text-slate-500 mt-1">※ PoS 60% 이상 도달 시 시뮬레이션 성공 추천</div>
+                  </div>
+
+                  {/* 수색 자원 투입 효율 요약 */}
+                  <div className="text-xs space-y-1.5 text-slate-300 font-sans">
+                    <div className="flex justify-between">
+                      <span>경찰 기동대 잔여:</span>
+                      <strong className="text-white">{policeUnits}명 / 30명</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>수색견 배치:</span>
+                      <strong className="text-teal-400">{3 - searchDogs}두 / 3두</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>드론 정찰망:</span>
+                      <strong className="text-indigo-400">{2 - thermalDrones}대 / 2대</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <button 
+                    onClick={runSearchSimulation}
+                    disabled={isSimulating || calculateTotalPos() < 20}
+                    className={`w-full py-2.5 rounded text-xs font-black text-white transition ${isSimulating || calculateTotalPos() < 20 ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700' : 'bg-police-neon hover:bg-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.4)] animate-pulse'}`}
+                  >
+                    🚀 초동 수색 시뮬레이션 개시 (Run)
+                  </button>
+                  {calculateTotalPos() < 20 && (
+                    <span className="text-[9px] text-red-400 block text-center mt-1">※ 격자에 수색 자원을 먼저 충분히 배치하십시오.</span>
+                  )}
+                </div>
+              </div>
+
+              {/* 2. 다중이용시설 코드 아담 (Code Adam - 법 제9조의4) 모듈 */}
+              <div className="glass-panel rounded-xl p-4 border-t-4 border-amber-500">
+                <h3 className="text-xs font-bold text-amber-400 mb-3 flex items-center gap-1.5">
+                  <span>🛍️</span> 5. 코드 아담 (다중이용시설 조기발견지침)
+                </h3>
+
+                {terrainType === "복합쇼핑몰" ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-white">경찰 자동 신고 타이머</span>
+                      <strong className="font-mono text-red-500 text-base animate-pulse">
+                        {String(Math.floor(codeAdamTimer / 60)).padStart(2, '0')}:{String(codeAdamTimer % 60).padStart(2, '0')}
+                      </strong>
+                    </div>
+
+                    {!codeAdamActive ? (
+                      <button 
+                        onClick={startCodeAdam}
+                        className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded text-xs transition shadow-[0_0_10px_rgba(245,158,11,0.4)]"
+                      >
+                        🚨 쇼핑몰 코드 아담 경보 발령
+                      </button>
+                    ) : (
+                      <div className="space-y-1.5 text-[10px] bg-slate-900 p-2 border border-slate-800 rounded text-slate-300">
+                        <span className="text-amber-400 font-bold block mb-1">📋 법정 6대 지침 조치 현황 (제2항)</span>
+                        <div className="flex items-center gap-1">
+                          <input type="checkbox" checked={codeAdamChecklist.step1} readOnly />
+                          <span>1. 경보 방송 즉시 송출</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <input type="checkbox" checked={codeAdamChecklist.step2} readOnly />
+                          <span>2. 전 출입구 감시 배치 (출입 통제)</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <input type="checkbox" checked={codeAdamChecklist.step3} onChange={(e) => setCodeAdamChecklist(prev => ({...prev, step3: e.target.checked}))} />
+                          <span>3. 시설 내부 CCTV 집중 추적</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <input type="checkbox" checked={codeAdamChecklist.step4} onChange={(e) => setCodeAdamChecklist(prev => ({...prev, step4: e.target.checked}))} />
+                          <span>4. 전 직원 합동 수색대 구성</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <input type="checkbox" checked={codeAdamChecklist.step5} readOnly />
+                          <span className="text-red-400 font-bold">5. 10분 내 미발견 시 경찰 신고 (의무)</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-xs text-slate-500">
+                    지형 환경을 <strong>[🛍️ 복합쇼핑몰]</strong>로 변경하시면 법 제9조의4에 따른 코드 아담 수색 통제 및 경보 발령 모듈이 활성화됩니다.
+                  </div>
+                )}
+              </div>
+
+            </section>
+
+          </main>
+
+          {/* --- LIVE SIMULATION LOG WINDOW --- */}
+          {simulationLogs.length > 0 && (
+            <footer className="max-w-7xl mx-auto px-4 mt-6 w-full no-print">
+              <div className="glass-panel rounded-xl p-4 border-l-4 border-police-neon">
+                <h3 className="font-bold text-police-accent flex items-center gap-1.5 text-xs mb-2">
+                  <span>📡</span> 112 무선 지휘소 실시간 무전 무선 로그 (격자 수색 정밀 추적)
+                </h3>
+                <div className="bg-slate-950/80 p-3 border border-slate-800 rounded font-mono text-[10px] text-slate-300 space-y-1.5 max-h-[150px] overflow-y-auto">
+                  {simulationLogs.map((log, index) => (
+                    <div key={index} className="flex gap-2">
+                      <span className="text-police-accent font-bold">[{log.time}]</span>
+                      <span className={log.text.includes("발견") ? "text-emerald-400 font-bold animate-pulse" : ""}>{log.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </footer>
+          )}
+
+          {/* ========================================================
+              다중이용시설 지도·감독 행정장부 패널 (법 제9조의4 제4항)
+              ======================================================== */}
+          <section className="max-w-7xl mx-auto px-4 mt-6 w-full no-print">
+            <div className="glass-panel rounded-xl p-5 border-l-4 border-teal-500">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-teal-400 flex items-center gap-1.5 text-sm">
+                  <span>📄</span> 관내 다중이용시설 지도·감독 대장 [실종아동법 제9조의4 제4항 및 제19조 근거]
+                </h3>
+                <span className="text-[10px] text-slate-400">경찰관서의 장 지도·감독 의무 관리대장</span>
+              </div>
+
+              <div className="overflow-x-auto text-[11px]">
+                <table className="w-full text-slate-300 border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-slate-700 bg-slate-900/60 text-slate-400">
+                      <th className="p-2">시설 코드</th>
+                      <th className="p-2">시설 명칭</th>
+                      <th className="p-2">시설 유형</th>
+                      <th className="p-2">규모 (면적 ㎡)</th>
+                      <th className="p-2">지침 조치 상태 (제2항)</th>
+                      <th className="p-2">연 1회 교육·훈련 상태 (제3항)</th>
+                      <th className="p-2">최종 훈련일</th>
+                      <th className="p-2 text-right">지도·감독 행정처분</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {facilitiesList.map((fac) => (
+                      <tr key={fac.id} className="hover:bg-slate-800/20">
+                        <td className="p-2 font-mono">{fac.id}</td>
+                        <td className="p-2 font-bold text-white">{fac.name}</td>
+                        <td className="p-2">{fac.type}</td>
+                        <td className="p-2 font-mono">{fac.sizeSqm.toLocaleString()} ㎡</td>
+                        <td className="p-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] ${fac.auditStatus === "이행" ? 'bg-green-500/20 text-green-400 border border-green-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40 font-bold'}`}>
+                            {fac.auditStatus}
+                          </span>
+                        </td>
+                        <td className="p-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] ${fac.trainingStatus === "완료" ? 'bg-green-500/20 text-green-400' : fac.trainingStatus === "과태료 처분" ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-amber-500/20 text-amber-400'}`}>
+                            {fac.trainingStatus}
+                          </span>
+                        </td>
+                        <td className="p-2 font-mono text-slate-400">{fac.lastTrainingDate}</td>
+                        <td className="p-2 text-right">
+                          {(fac.auditStatus === "미이행" || fac.trainingStatus === "미완료") ? (
+                            <button 
+                              onClick={() => handleIssueFine(fac)}
+                              className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-bold"
+                            >
+                              과태료 처분 고지
+                            </button>
+                          ) : (
+                            <span className="text-slate-500 text-[10px] font-semibold">감사 적합</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          {/* ========================================================
+              MODAL: 현장 수색 작전 계획서 인쇄 레이아웃 (Batang font, HWP 완벽 구현)
+              ======================================================== */}
+          {showPrintModal && (
+            <div className="fixed inset-0 bg-black/90 z-50 overflow-y-auto p-4 flex flex-col items-center justify-start no-print">
+              <div className="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-xl p-4 mb-4 flex justify-between items-center">
+                <span className="text-sm font-bold text-white flex items-center gap-1.5">
+                  🖨️ 실종아동등 현장 수색 작전 계획서 인쇄 미리보기 (인쇄 최적화)
+                </span>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold"
+                  >
+                    지금 인쇄하기 (Print)
+                  </button>
+                  <button 
+                    onClick={() => setShowPrintModal(false)}
+                    className="px-4 py-2 bg-slate-800 text-slate-300 rounded text-xs hover:bg-slate-700"
+                  >
+                    미리보기 닫기
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Document Container (A4 clean sheet styled in HWP format) */}
+              <div className="w-full max-w-[210mm] min-h-[297mm] bg-white text-black p-12 shadow-2xl rounded border border-slate-300 text-xs">
+                
+                {/* Official Rule Identifier */}
+                <div className="flex justify-between items-end border-b border-black pb-2 mb-4">
+                  <span className="text-[10px] text-gray-600">보존 기간: 영구 (수색 수사 지휘 기록철)</span>
+                  <span className="text-[10px] text-gray-600">대한민국 경찰청 여청과 실종수사대</span>
+                </div>
+
+                {/* Main Form Title */}
+                <div className="border-4 border-black p-4 text-center my-6">
+                  <h1 className="text-2xl font-extrabold tracking-widest font-serif">실종아동등 현장 수색 작전 계획서</h1>
+                </div>
+
+                {/* Case Info Table */}
+                <h3 className="font-bold text-sm mb-1.5 font-serif">1. 대상 사건 및 수색 환경 개요</h3>
+                <table className="w-full border-collapse border-2 border-black mb-4 text-xs">
+                  <tbody>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2 font-bold w-24 text-center">사건 번호</td>
+                      <td className="border border-black p-2 font-mono w-44">{selectedCase.id}</td>
+                      <td className="border border-black bg-gray-100 p-2 font-bold w-24 text-center">대상자 성명</td>
+                      <td className="border border-black p-2 font-bold">{selectedCase.name} ({selectedCase.gender}, 만 {selectedCase.age}세)</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2 font-bold text-center">대상자 유형</td>
+                      <td className="border border-black p-2 w-44">{selectedCase.type}</td>
+                      <td className="border border-black bg-gray-100 p-2 font-bold text-center">최초 실종지</td>
+                      <td className="border border-black p-2">{selectedCase.missingLoc}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2 font-bold text-center">수색 지형</td>
+                      <td className="border border-black p-2" colSpan="3">
+                        <strong>지형타입:</strong> {terrainType} / <strong>수색 구역 범위:</strong> 최후 목격지(LKP) 반경 8x8 전술 격자망
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Deployed Resource Summary */}
+                <h3 className="font-bold text-sm mb-1.5 font-serif">2. 초동 작전 자원 투입 현황</h3>
+                <table className="w-full border-collapse border-2 border-black mb-4 text-xs">
+                  <tbody>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2 font-bold w-28 text-center">경찰 기동대 소대</td>
+                      <td className="border border-black p-2 w-44">{30 - policeUnits}명 배치 (총 가용: 30명)</td>
+                      <td className="border border-black bg-gray-100 p-2 font-bold w-28 text-center">119 구조 수색견</td>
+                      <td className="border border-black p-2">{3 - searchDogs}두 배치 (총 가용: 3두)</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2 font-bold text-center">열화상 수색 드론</td>
+                      <td className="border border-black p-2 w-44">{2 - thermalDrones}대 배치 (총 가용: 2대)</td>
+                      <td className="border border-black bg-gray-100 p-2 font-bold text-center">민간 자율 방범대</td>
+                      <td className="border border-black p-2">{15 - volunteers}명 배치 (총 가용: 15명)</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2 font-bold text-center">수색 종합 성공률</td>
+                      <td className="border border-black p-2 font-bold text-emerald-600" colSpan="3">
+                        누적 Area PoS: {calculateTotalPos()}% (수학적 SAR 구조 예측 모델 적용)
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Grid layout representation for the printed page */}
+                <h3 className="font-bold text-sm mb-1.5 font-serif">3. 격자별 과학적 자원 배치 도식</h3>
+                <div className="border border-black p-4 mb-4 flex flex-col items-center">
+                  <div className="grid grid-cols-8 gap-1 w-full max-w-[400px]">
+                    {gridData.map((row, r) => 
+                      row.map((cell, c) => {
+                        const hasResource = cell.resources.police > 0 || cell.resources.drones > 0 || cell.resources.dogs > 0;
+                        return (
+                          <div 
+                            key={`print-${r}-${c}`}
+                            className={`border border-black text-center p-1 font-mono text-[9px] aspect-square flex flex-col justify-between ${hasResource ? 'bg-gray-200' : ''}`}
+                          >
+                            <span className="font-bold block">{cell.coord}</span>
+                            <div className="flex justify-center gap-0.5 text-[8px]">
+                              {cell.resources.police > 0 && <span>P</span>}
+                              {cell.resources.drones > 0 && <span>R</span>}
+                              {cell.resources.dogs > 0 && <span>D</span>}
+                            </div>
+                            <span className="text-[7px] block text-gray-600">{cell.pos}%</span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                  <div className="text-[9px] text-gray-500 mt-2">
+                    * 범례: P(경찰), R(드론), D(수색견) / 격자별 기재 수치는 해당 격자 수색성공률(PoS)
+                  </div>
+                </div>
+
+                {/* Commander Instructions */}
+                <h3 className="font-bold text-sm mb-1.5 font-serif">4. 현장 현장 지휘관 통제 지시사항</h3>
+                <div className="border-2 border-black p-4 leading-relaxed text-[11px] h-32 valign-top mb-6">
+                  {selectedTactic ? (
+                    <div>
+                      <strong>선택 작전 전술:</strong> {selectedTactic}<br/><br/>
+                      <strong>지휘관 수색 사유 및 지침:</strong> {tacticJustification}
+                    </div>
+                  ) : (
+                    "지휘관의 격자별 수색 지침 내용 기술서가 작성되지 않았습니다. 현장 무전 지시로 대체 가능."
+                  )}
+                </div>
+
+                {/* Sign block */}
+                <div className="text-center my-10 font-bold leading-loose text-sm font-serif">
+                  「실종아동등의 보호 및 지원에 관한 법률」 제9조제1항에 의거하여<br/>
+                  실종아동등의 조속한 발견을 위해 위와 같이 초동 격자 수색 작전 계획을 수립 및 하달합니다.
+                </div>
+
+                <div className="text-right my-6 font-bold text-sm font-serif">
+                  {new Date().getFullYear()}년 {String(new Date().getMonth() + 1).padStart(2, '0')}월 {String(new Date().getDate()).padStart(2, '0')}일
+                </div>
+
+                <div className="flex justify-between items-center font-bold text-base my-8 font-serif">
+                  <span>수색 현장 지휘 통제관 (직인생략)</span>
+                  <span className="text-lg">____________________ (인)</span>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<SearchApp />);
+  </script>
+</body>
+</html>

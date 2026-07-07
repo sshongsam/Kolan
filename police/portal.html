@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>실종아동 통합 수색·수사·지원 포털 시스템</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS config for customized police unified command center palette -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            police: {
+              900: '#060a13',
+              800: '#0b0f19',
+              700: '#111827',
+              600: '#1f2937',
+              blue: '#1e3a8a',
+              neon: '#3b82f6', // Cyber Blue
+              accent: '#60a5fa',
+              amber: '#f59e0b',
+              crimson: '#ef4444',
+              teal: '#14b8a6',
+              pink: '#ec4899',
+              indigo: '#6366f1'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- React & ReactDOM (React 18) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <!-- Babel Compiler for in-browser JSX parsing -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin="anonymous"></script>
+  
+  <!-- Google Fonts: Inter & Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #060a13;
+      color: #e5e7eb;
+      overflow-x: hidden;
+    }
+    
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #060a13; }
+    ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+
+    /* Glassmorphism utility */
+    .glass-panel {
+      background: rgba(11, 15, 25, 0.75);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(59, 130, 246, 0.15);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    }
+    
+    .glass-input {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #f3f4f6;
+      transition: all 0.2s ease-in-out;
+    }
+    .glass-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+      outline: none;
+    }
+
+    .neon-text-glow { text-shadow: 0 0 8px rgba(59, 130, 246, 0.6); }
+    .neon-border-glow:hover {
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+
+    /* Radar Sweeping Animation */
+    @keyframes radar-sweep {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .radar-beam {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: conic-gradient(from 0deg at 50% 50%, rgba(16, 185, 129, 0.2) 0deg, rgba(16, 185, 129, 0) 180deg);
+      border-radius: 8px;
+      pointer-events: none;
+      animation: radar-sweep 3s linear infinite;
+    }
+
+    /* Scanline Animation */
+    @keyframes scan {
+      0% { top: 0%; }
+      50% { top: 100%; }
+      100% { top: 0%; }
+    }
+    .scan-line {
+      position: absolute;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(180deg, transparent, rgba(59, 130, 246, 0.8), transparent);
+      animation: scan 5s linear infinite;
+      pointer-events: none;
+    }
+
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        font-family: 'Batang', 'Times New Roman', serif !important;
+      }
+      .no-print { display: none !important; }
+      .print-area { display: block !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- React root mount point -->
+  <div id="root"></div>
+
+  <!-- Core App Code in Babel JSX -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- MOCK SEED CASES DATABASE (기본 로드되는 지문등록/신고 사건 DB) ---
+    const SEED_CASES = [
+      {
+        id: "2026-MP-098234",
+        name: "김민우",
+        age: 7,
+        gender: "남",
+        type: "아동 (가목)",
+        birthDate: "2019-10-15",
+        rrn: "191015-3123456",
+        phone: "010-9999-1111 (소지키즈폰)",
+        address: "서울특별시 강남구 테헤란로 123",
+        missingTime: "2026-05-27T03:30",
+        missingLoc: "서울 강남역 3번출구 놀이터",
+        missingType: "길을 잃음",
+        missingDetail: "학원 끝난 후 놀이터에서 노는 모습을 마지막으로 목격한 뒤 연락이 두절됨. 키즈폰 전원 꺼짐.",
+        height: 118,
+        weight: 22,
+        build: "보통",
+        faceShape: "계란형",
+        hairStyle: "단발생머리",
+        hairColor: "검은색",
+        clothingUpper: "노란색 티셔츠",
+        clothingLower: "청바지",
+        clothingShoes: "흰색 운동화",
+        clothingHat: "뽀로로 캡모자",
+        otherFeatures: "오른쪽 뺨에 옅은 흉터, 뽀로로를 극히 선호함.",
+        guardianName: "김철수",
+        guardianRelation: "부 (Father)",
+        guardianContact: "010-1234-5678",
+        guardianAddress: "서울특별시 강남구 테헤란로 123",
+        photoUrl: "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?auto=format&fit=crop&q=80&w=300",
+        photoUrlAgedUp: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=300",
+        status: "수색중"
+      },
+      {
+        id: "2026-MP-154930",
+        name: "이하은",
+        age: 11,
+        gender: "여",
+        type: "아동 (가목)",
+        birthDate: "2015-04-23",
+        rrn: "150423-4987654",
+        phone: "무소지",
+        address: "부산광역시 해운대구 우동 456",
+        missingTime: "2026-05-27T01:30",
+        missingLoc: "부산 해운대 해수욕장 입구 광장",
+        missingType: "길을 잃음",
+        missingDetail: "가족들과 해수욕장 관광 중 인파 속에서 순간 소실됨.",
+        height: 132,
+        weight: 28,
+        build: "야윔",
+        faceShape: "계란형",
+        hairStyle: "어깨선 단발머리",
+        hairColor: "갈색",
+        clothingUpper: "흰색 블라우스",
+        clothingLower: "핑크색 치마",
+        clothingShoes: "빨간색 샌들",
+        clothingHat: "분홍색 백팩",
+        otherFeatures: "발음이 다소 부정확하며 왼손잡이임.",
+        guardianName: "박지영",
+        guardianRelation: "모 (Mother)",
+        guardianContact: "010-8765-4321",
+        guardianAddress: "부산광역시 해운대구 우동 456",
+        photoUrl: "https://images.unsplash.com/photo-1519824141125-994e37bd7a10?auto=format&fit=crop&q=80&w=300",
+        photoUrlAgedUp: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=300",
+        status: "수색중"
+      },
+      {
+        id: "2026-MP-982134",
+        name: "박진우",
+        age: 30,
+        gender: "남",
+        type: "지적장애인 (나목)",
+        birthDate: "1996-12-01",
+        rrn: "961201-1055443",
+        phone: "010-3333-4444 (소지폰)",
+        address: "인천광역시 남동구 구월동 789",
+        missingTime: "2026-05-26T18:30",
+        missingLoc: "인천 구월동 빌라 골목",
+        missingType: "길을 잃음",
+        missingDetail: "집 앞 마트에 간다며 나간 후 길을 잃어 귀가하지 못함.",
+        height: 172,
+        weight: 68,
+        build: "보통",
+        faceShape: "둥근형",
+        hairStyle: "스포츠형 숏컷",
+        hairColor: "검은색",
+        clothingUpper: "검은색 트레이닝 집업",
+        clothingLower: "검은색 추리닝 바지",
+        clothingShoes: "검은색 슬리퍼",
+        clothingHat: "검은색 캡모자",
+        otherFeatures: "중증 지적장애. 자기 이름을 반복하는 습관. 걸음걸이 절뚝임.",
+        guardianName: "박태형",
+        guardianRelation: "부 (Father)",
+        guardianContact: "010-5555-4444",
+        guardianAddress: "인천광역시 남동구 구월동 789",
+        photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300",
+        photoUrlAgedUp: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300",
+        status: "수색중"
+      },
+      {
+        id: "2026-MP-445832",
+        name: "최순임",
+        age: 81,
+        gender: "여",
+        type: "치매환자 (다목)",
+        birthDate: "1945-07-08",
+        rrn: "450708-2099887",
+        phone: "무소지",
+        address: "경기도 수원시 팔달구 매산로 99",
+        missingTime: "2026-05-26T06:30",
+        missingLoc: "경기 수원역 동측 광장 버스정류장",
+        missingType: "길을 잃음",
+        missingDetail: "보호자가 잠든 사이 무단 외출하여 버스를 타고 나간 것으로 확인됨.",
+        height: 154,
+        weight: 48,
+        build: "야윔",
+        faceShape: "계란형",
+        hairStyle: "흰색 뽀글파마 단발",
+        hairColor: "흰색",
+        clothingUpper: "자주색 카디건",
+        clothingLower: "꽃무늬 몸배바지",
+        clothingShoes: "자주색 고무신",
+        clothingHat: "분홍색 스카프 목에 두름",
+        otherFeatures: "치매 고령층. 고향 안동 이야기를 반복함.",
+        guardianName: "최성호",
+        guardianRelation: "자 (Son)",
+        guardianContact: "010-9999-8888",
+        guardianAddress: "경기도 수원시 팔달구 매산로 99",
+        photoUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300",
+        photoUrlAgedUp: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300",
+        status: "수색중"
+      }
+    ];
+
+    // --- MOCK SEARCHING FAMILIES & DNA DB ---
+    const FAMILY_DB = [
+      {
+        id: "FAM-098234",
+        parentName: "김철수",
+        parentRrn: "651015-1123456",
+        relation: "부 (Father)",
+        missingChildName: "김민우",
+        missingAgeAtLoss: 7,
+        missingYear: 2016,
+        contact: "010-1234-5678",
+        address: "서울특별시 강남구 테헤란로 123",
+        specialFeatures: "오른쪽 뺨에 희미한 마름모꼴 흉터가 있었음. 활달한 소년.",
+        childPhotoUrlAtLoss: "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?auto=format&fit=crop&q=80&w=300",
+        childPhotoUrlAgedUp: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=300"
+      },
+      {
+        id: "FAM-154930",
+        parentName: "박지영",
+        parentRrn: "720423-2987654",
+        relation: "모 (Mother)",
+        missingChildName: "이하은",
+        missingAgeAtLoss: 11,
+        missingYear: 2021,
+        contact: "010-8765-4321",
+        address: "부산광역시 해운대구 우동 456",
+        specialFeatures: "왼손잡이이며 발음이 다소 부정확했음. 차분한 성격.",
+        childPhotoUrlAtLoss: "https://images.unsplash.com/photo-1519824141125-994e37bd7a10?auto=format&fit=crop&q=80&w=300",
+        childPhotoUrlAgedUp: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=300"
+      }
+    ];
+
+    // --- MAIN PORTAL COMPONENT ---
+    function UnifiedPortal() {
+      // --- GLOBAL APP STATES (실시간 상호 공유되는 유일 정보 저장소) ---
+      const [cases, setCases] = useState(SEED_CASES);
+      const [tips, setTips] = useState([]);
+      const [destructionLogs, setDestructionLogs] = useState([]);
+      const [activeTab, setActiveTab] = useState("report"); // report, tip, search, invest, family
+      
+      // 접수 수사관 세팅
+      const [officerDept] = useState("서울강남경찰서 여성청소년과 실종수사팀");
+      const [officerRank] = useState("경위");
+      const [officerName] = useState("홍성삼");
+
+      // --- GLOBAL STATE HANDLERS ---
+      
+      // 신규 사건 접수 등록 핸들러 (1단계 -> 글로벌 DB 추가)
+      const onAddCase = (newCase) => {
+        setCases(prev => [newCase, ...prev]);
+      };
+
+      // 사건 업데이트 및 수색중 -> 종결 처리
+      const onUpdateCaseStatus = (caseId, status) => {
+        setCases(prev => prev.map(c => {
+          if (c.id === caseId) {
+            return { ...c, status: status };
+          }
+          return c;
+        }));
+      };
+
+      // 시민 제보 접수 핸들러 (2단계 -> 글로벌 DB 추가)
+      const onAddTip = (newTip) => {
+        setTips(prev => [newTip, ...prev]);
+      };
+
+      // 개인위치정보 및 유전자 파기대장 등재 핸들러 (지체 없는 파기 증적 확보)
+      const onAddDestructionLog = (newLog) => {
+        setDestructionLogs(prev => [newLog, ...prev]);
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col relative pb-10 bg-police-900">
+          <div className="scan-line no-print"></div>
+
+          {/* --- MAIN HEADER --- */}
+          <header className="glass-panel no-print border-b border-police-neon/40 p-4 sticky top-0 z-50 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-police-blue border-2 border-police-neon rounded-full flex items-center justify-center text-police-accent text-xl font-bold shadow-[0_0_15px_rgba(59,130,246,0.6)]">
+                경진
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-wider text-white flex items-center gap-2">
+                  실종아동등 통합 수색·수사·지원 포털 시스템
+                  <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full font-black animate-pulse border border-red-500">
+                    5-in-1 UNIFIED PORTAL
+                  </span>
+                </h1>
+                <p className="text-xs text-slate-400">
+                  실종아동등의 보호 및 지원에 관한 법률 [법률 제21108호, 2026. 5. 12. 타법개정] 완벽 대응 전산센터
+                </p>
+              </div>
+            </div>
+
+            {/* TAB SELECTOR MENU (no-print) */}
+            <nav className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+              <button 
+                onClick={() => setActiveTab("report")}
+                className={`px-4 py-2 rounded font-bold transition ${activeTab === "report" ? 'bg-police-neon text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+              >
+                👶 1. 신고접수
+              </button>
+              <button 
+                onClick={() => setActiveTab("tip")}
+                className={`px-4 py-2 rounded font-bold transition ${activeTab === "tip" ? 'bg-police-amber text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'}`}
+              >
+                📞 2. 제보분석
+              </button>
+              <button 
+                onClick={() => setActiveTab("search")}
+                className={`px-4 py-2 rounded font-bold transition ${activeTab === "search" ? 'bg-police-teal text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+              >
+                🗺️ 3. 격자수색
+              </button>
+              <button 
+                onClick={() => setActiveTab("invest")}
+                className={`px-4 py-2 rounded font-bold transition ${activeTab === "invest" ? 'bg-police-indigo text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+              >
+                🔮 4. 스마트수사
+              </button>
+              <button 
+                onClick={() => setActiveTab("family")}
+                className={`px-4 py-2 rounded font-bold transition ${activeTab === "family" ? 'bg-police-pink text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+              >
+                ❤️ 5. 가족지원
+              </button>
+            </nav>
+
+            <div className="text-right text-xs">
+              <span className="text-[10px] text-slate-500 block">통합 수사관</span>
+              <strong className="text-slate-300 font-mono">{officerDept} {officerRank} {officerName}</strong>
+            </div>
+          </header>
+
+          {/* --- MAIN MODULE RENDER ROUTER --- */}
+          <main className="flex-grow w-full no-print">
+            {activeTab === "report" && (
+              <ReportModule 
+                cases={cases} 
+                onAddCase={onAddCase} 
+                officerDept={officerDept} 
+                officerRank={officerRank} 
+                officerName={officerName}
+              />
+            )}
+            {activeTab === "tip" && (
+              <TipModule 
+                cases={cases} 
+                tips={tips} 
+                onAddTip={onAddTip} 
+                onAddDestructionLog={onAddDestructionLog}
+                onUpdateCaseStatus={onUpdateCaseStatus}
+              />
+            )}
+            {activeTab === "search" && (
+              <SearchModule 
+                cases={cases}
+                onUpdateCaseStatus={onUpdateCaseStatus}
+              />
+            )}
+            {activeTab === "invest" && (
+              <InvestModule 
+                cases={cases}
+                destructionLogs={destructionLogs}
+                onAddDestructionLog={onAddDestructionLog}
+                onUpdateCaseStatus={onUpdateCaseStatus}
+              />
+            )}
+            {activeTab === "family" && (
+              <FamilyModule 
+                cases={cases}
+                destructionLogs={destructionLogs}
+                onAddDestructionLog={onAddDestructionLog}
+                onUpdateCaseStatus={onUpdateCaseStatus}
+              />
+            )}
+          </main>
+        </div>
+      );
+    }
+
+    // =========================================================================
+    // 1단계 모듈: 실종아동 신고접수 모듈 (ReportModule)
+    // =========================================================================
+    function ReportModule({ cases, onAddCase, officerDept, officerRank, officerName }) {
+      const [caseNo] = useState(`2026-MP-${Math.floor(100000 + Math.random() * 900000)}`);
+      const [reporterName, setReporterName] = useState("");
+      const [reporterRelation, setReporterRelation] = useState("");
+      const [reporterContact, setReporterContact] = useState("");
+      const [reporterAddress, setReporterAddress] = useState("");
+
+      const [targetName, setTargetName] = useState("");
+      const [targetGender, setTargetGender] = useState("남");
+      const [targetRrn, setTargetRrn] = useState("");
+      const [targetBirthDate, setTargetBirthDate] = useState("");
+      const [targetPhone, setTargetPhone] = useState("");
+      const [targetAddress, setTargetAddress] = useState("");
+      const [targetType, setTargetType] = useState("아동 (법 제2조 제1호 가목)");
+
+      const [targetHeight, setTargetHeight] = useState("");
+      const [targetWeight, setTargetWeight] = useState("");
+      const [targetBuild, setTargetBuild] = useState("보통");
+      const [targetFaceShape, setTargetFaceShape] = useState("둥근형");
+      const [targetHairStyle, setTargetHairStyle] = useState("단발생머리");
+      const [targetHairColor, setTargetHairColor] = useState("검은색");
+      const [clothingUpper, setClothingUpper] = useState("");
+      const [clothingLower, setClothingLower] = useState("");
+      const [clothingShoes, setClothingShoes] = useState("");
+      const [clothingHat, setClothingHat] = useState("");
+      const [otherPhysicalFeatures, setOtherPhysicalFeatures] = useState("");
+      const [photoUrl, setPhotoUrl] = useState("https://images.unsplash.com/photo-1503919545889-aef636e10ad4?auto=format&fit=crop&q=80&w=300");
+
+      const [missingLoc, setMissingLoc] = useState("");
+      const [missingType, setMissingType] = useState("길을 잃음");
+      const [missingDetail, setMissingDetail] = useState("");
+
+      const [showPrint, setShowPrint] = useState(false);
+
+      // 주민번호에 따른 나이 자동 계산 및 분류 연동
+      useEffect(() => {
+        if (!targetRrn) return;
+        let cleaned = targetRrn.replace(/[^0-9]/g, '');
+        if (cleaned.length >= 6) {
+          cleaned = cleaned.slice(0, 6) + (cleaned.length > 6 ? '-' + cleaned.slice(6, 13) : '');
+        }
+        if (cleaned.length === 14) {
+          const rrnPart1 = cleaned.split('-')[0];
+          const rrnPart2 = cleaned.split('-')[1];
+          let year = parseInt(rrnPart1.slice(0, 2), 10);
+          const genderDigit = parseInt(rrnPart2.charAt(0), 10);
+          year += (genderDigit === 1 || genderDigit === 2 || genderDigit === 5 || genderDigit === 6) ? 1900 : 2000;
+          
+          const birthStr = `${year}-${rrnPart1.slice(2, 4)}-${rrnPart1.slice(4, 6)}`;
+          setTargetBirthDate(birthStr);
+          
+          const age = new Date().getFullYear() - year;
+          if (age < 18) setTargetType("아동 (법 제2조 제1호 가목)");
+        }
+      }, [targetRrn]);
+
+      const handleRegister = () => {
+        if (!targetName || !missingLoc || !reporterName || !reporterContact) {
+          alert("❌ 필수 인적사항 정보가 누락되었습니다.");
+          return;
+        }
+
+        const newCase = {
+          id: caseNo,
+          name: targetName,
+          age: targetBirthDate ? (new Date().getFullYear() - new Date(targetBirthDate).getFullYear()) : 7,
+          gender: targetGender,
+          type: targetType,
+          birthDate: targetBirthDate,
+          rrn: targetRrn,
+          phone: targetPhone || "무소지",
+          address: targetAddress,
+          missingTime: new Date().toISOString().slice(0, 16),
+          missingLoc: missingLoc,
+          missingType: missingType,
+          missingDetail: missingDetail,
+          height: targetHeight || 120,
+          weight: targetWeight || 25,
+          build: targetBuild,
+          faceShape: targetFaceShape,
+          hairStyle: targetHairStyle,
+          hairColor: targetHairColor,
+          clothingUpper: clothingUpper,
+          clothingLower: clothingLower,
+          clothingShoes: clothingShoes,
+          clothingHat: clothingHat,
+          otherFeatures: otherPhysicalFeatures,
+          guardianName: reporterName,
+          guardianRelation: reporterRelation,
+          guardianContact: reporterContact,
+          guardianAddress: reporterAddress,
+          photoUrl: photoUrl,
+          photoUrlAgedUp: photoUrl,
+          status: "수색중"
+        };
+
+        onAddCase(newCase);
+        alert(`🚨 [1단계 정식 접수 완료]\n성명: ${targetName} 님의 실종 접수와 초동 정보 동기화가 포털 글로벌 DB 상에 적용되었습니다.`);
+      };
+
+      return (
+        <div className="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full relative">
+          {/* Left panel: forms */}
+          <div className="lg:col-span-8 space-y-6">
+            
+            {/* 신고자 정보 */}
+            <div className="glass-panel rounded-xl p-5 border-l-4 border-police-neon">
+              <h2 className="text-sm font-bold text-police-accent mb-4 flex items-center gap-2">👮 1. 신고자 및 접수 기본정보</h2>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <label className="block text-slate-400 mb-1">접수사건번호</label>
+                  <input type="text" className="w-full p-1.5 rounded glass-input text-police-accent font-mono" value={caseNo} readOnly />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">신고자 성명</label>
+                  <input type="text" className="w-full p-1.5 rounded glass-input" placeholder="홍길동" value={reporterName} onChange={(e) => setReporterName(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">관계</label>
+                  <input type="text" className="w-full p-1.5 rounded glass-input" placeholder="부, 모 등" value={reporterRelation} onChange={(e) => setReporterRelation(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">신고자 연락처</label>
+                  <input type="text" className="w-full p-1.5 rounded glass-input" placeholder="010-XXXX-XXXX" value={reporterContact} onChange={(e) => setReporterContact(e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            {/* 대상자 인적사항 */}
+            <div className="glass-panel rounded-xl p-5 border-l-4 border-police-neon">
+              <h2 className="text-sm font-bold text-police-accent mb-4 flex items-center gap-2">👤 2. 실종대상자 인적사항</h2>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <label className="block text-white mb-1">성명 (실종자)</label>
+                  <input type="text" className="w-full p-1.5 rounded glass-input font-bold" placeholder="김민우" value={targetName} onChange={(e) => setTargetName(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">성별</label>
+                  <select className="w-full p-1.5 rounded glass-input" value={targetGender} onChange={(e) => setTargetGender(e.target.value)}>
+                    <option value="남">남</option>
+                    <option value="여">여</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">주민등록번호</label>
+                  <input type="text" className="w-full p-1.5 rounded glass-input font-mono" placeholder="XXXXXX-XXXXXXX" value={targetRrn} onChange={(e) => setTargetRrn(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">소지 휴대전화</label>
+                  <input type="text" className="w-full p-1.5 rounded glass-input" placeholder="010-XXXX-XXXX" value={targetPhone} onChange={(e) => setTargetPhone(e.target.value)} />
+                </div>
+              </div>
+
+              {/* 법적 분류 연동 선택 */}
+              <div className="mt-4 p-3 bg-police-blue/20 border border-police-neon/50 rounded-lg text-xs flex justify-between items-center">
+                <span className="text-slate-300 font-bold">법정 실종 유형 분류:</span>
+                <select className="p-1.5 rounded glass-input text-xs font-bold text-police-accent" value={targetType} onChange={(e) => setTargetType(e.target.value)}>
+                  <option value="아동 (법 제2조 제1호 가목)">👶 18세 미만 아동 (가목)</option>
+                  <option value="지적장애인 (법 제2조 제1호 나목)">🧠 지적/자폐성/정신장애인 (나목)</option>
+                  <option value="치매환자 (법 제2조 제1호 다목)">👵 치매환자 (다목)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 신체 특징 */}
+            <div className="glass-panel rounded-xl p-5 border-l-4 border-emerald-500">
+              <h2 className="text-sm font-bold text-emerald-400 mb-4 flex items-center gap-2">👕 3. 신체 특징 및 의복 착의 (별지 제1호 규격)</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <label className="block text-slate-400 mb-1">신장 (cm)</label>
+                  <input type="number" className="w-full p-1.5 rounded glass-input" placeholder="118" value={targetHeight} onChange={(e) => setTargetHeight(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">체중 (kg)</label>
+                  <input type="number" className="w-full p-1.5 rounded glass-input" placeholder="22" value={targetWeight} onChange={(e) => setTargetWeight(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">체격</label>
+                  <select className="w-full p-1.5 rounded glass-input" value={targetBuild} onChange={(e) => setTargetBuild(e.target.value)}>
+                    <option value="야윔">야윔</option>
+                    <option value="보통">보통</option>
+                    <option value="비대">비대</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">얼굴형</label>
+                  <input type="text" className="w-full p-1.5 rounded glass-input" value={targetFaceShape} onChange={(e) => setTargetFaceShape(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs mt-3">
+                <input type="text" className="w-full p-1.5 rounded glass-input" placeholder="상의 (예: 노란색 티셔츠)" value={clothingUpper} onChange={(e) => setClothingUpper(e.target.value)} />
+                <input type="text" className="w-full p-1.5 rounded glass-input" placeholder="하의 (예: 청바지)" value={clothingLower} onChange={(e) => setClothingLower(e.target.value)} />
+                <input type="text" className="w-full p-1.5 rounded glass-input" placeholder="신발 (예: 흰색 운동화)" value={clothingShoes} onChange={(e) => setClothingShoes(e.target.value)} />
+                <input type="text" className="w-full p-1.5 rounded glass-input" placeholder="기타/모자 (예: 뽀로로 모자)" value={clothingHat} onChange={(e) => setClothingHat(e.target.value)} />
+              </div>
+            </div>
+
+            {/* 실종 경위 */}
+            <div className="glass-panel rounded-xl p-5 border-l-4 border-amber-500">
+              <h2 className="text-sm font-bold text-amber-400 mb-4 flex items-center gap-2">🕒 4. 상세 실종 발생 경위</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block text-white mb-1">실종 발생 장소 (최후 목격지)</label>
+                  <input type="text" className="w-full p-1.5 rounded glass-input" placeholder="강남역 3번출구 놀이터" value={missingLoc} onChange={(e) => setMissingLoc(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">실종 유형</label>
+                  <select className="w-full p-1.5 rounded glass-input" value={missingType} onChange={(e) => setMissingType(e.target.value)}>
+                    <option value="길을 잃음">길을 잃음</option>
+                    <option value="단순미귀가">단순 미귀가</option>
+                    <option value="무단가출">무단 가출</option>
+                    <option value="범죄의심">🚨 범죄 의심 (납치/유괴)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button 
+                onClick={handleRegister}
+                className="px-6 py-2.5 rounded bg-police-neon text-white font-bold text-xs"
+              >
+                💾 112 포털에 사건 정보 정식 등록
+              </button>
+              <button 
+                onClick={() => setShowPrint(true)}
+                className="px-6 py-2.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+              >
+                🖨️ 별지 제1호 서식 인쇄 미리보기
+              </button>
+            </div>
+
+          </div>
+
+          {/* Right panel: Active cases preview list */}
+          <div className="lg:col-span-4 space-y-4 text-xs">
+            <div className="glass-panel rounded-xl p-4 border-t-4 border-police-neon">
+              <h3 className="font-bold text-police-accent mb-3">📡 현재 포털 가동 중인 활성 사건 목록 ({cases.length}건)</h3>
+              <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
+                {cases.map((c) => (
+                  <div key={c.id} className="p-2.5 rounded bg-slate-900/80 border border-slate-800 flex justify-between items-center">
+                    <div>
+                      <strong className="text-white">{c.name} ({c.gender}, 만 {c.age}세)</strong>
+                      <p className="text-[10px] text-slate-400 leading-snug mt-0.5">{c.missingLoc}</p>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-black ${c.status === "수색중" ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
+                      {c.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* PRINT MODAL */}
+          {showPrint && (
+            <div className="fixed inset-0 bg-black/90 z-50 overflow-y-auto p-4 flex flex-col items-center justify-start no-print">
+              <div className="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-xl p-4 mb-4 flex justify-between items-center text-xs">
+                <span className="font-bold text-white">🖨️ [시행규칙 별지 제1호 서식] 실종아동등의 신고접수서 출력 미리보기</span>
+                <div className="flex gap-2">
+                  <button onClick={() => window.print()} className="px-3 py-1.5 bg-emerald-600 text-white rounded font-bold">인쇄하기</button>
+                  <button onClick={() => setShowPrint(false)} className="px-3 py-1.5 bg-slate-850 text-slate-300 rounded">닫기</button>
+                </div>
+              </div>
+
+              {/* Printable sheet */}
+              <div className="w-full max-w-[210mm] min-h-[297mm] bg-white text-black p-12 shadow-2xl rounded border border-slate-300 text-xs">
+                <div className="flex justify-between items-end border-b border-black pb-2 mb-4">
+                  <span className="text-[9px] text-gray-600">[별지 제1호서식]</span>
+                  <span className="text-[9px] text-gray-600">실종아동등의 보호 및 지원에 관한 법률 시행규칙</span>
+                </div>
+                <div className="border-4 border-black p-4 text-center my-6">
+                  <h1 className="text-2xl font-extrabold tracking-widest font-serif">실종아동등의 신고접수서</h1>
+                </div>
+
+                <div className="flex justify-between border-2 border-black p-2 font-bold mb-4 bg-gray-50">
+                  <span>접수번호: {caseNo}</span>
+                  <span>접수일시: {new Date().toLocaleString()}</span>
+                  <span>대상: {targetType}</span>
+                </div>
+
+                <table className="w-full border-collapse border border-black text-[11px] mb-4">
+                  <tbody>
+                    <tr className="bg-gray-100 font-bold text-center">
+                      <td className="border border-black p-2 w-28">실종아동 성명</td>
+                      <td className="border border-black p-2 w-32">성별</td>
+                      <td className="border border-black p-2">생년월일 (만 연령)</td>
+                    </tr>
+                    <tr className="text-center font-bold">
+                      <td className="border border-black p-2.5 text-base">{targetName}</td>
+                      <td className="border border-black p-2.5">{targetGender}자</td>
+                      <td className="border border-black p-2.5">{targetRrn || "미상"}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2 font-bold text-center">최초 실종장소</td>
+                      <td className="border border-black p-2" colSpan="2">{missingLoc}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2 font-bold text-center">상세 신체특징</td>
+                      <td className="border border-black p-2" colSpan="2">
+                        키: {targetHeight}cm / 체중: {targetWeight}kg ({targetBuild}) / 두발: {targetHairStyle} ({targetHairColor})
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2 font-bold text-center">신고 경위</td>
+                      <td className="border border-black p-2" colSpan="2">{missingDetail || "놀이터 등에서 미귀가"}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2 font-bold text-center">보호자(신고자)</td>
+                      <td className="border border-black p-2" colSpan="2">성명: {reporterName} / 관계: {reporterRelation} / 연락처: {reporterContact}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div className="text-center my-10 font-bold leading-loose text-xs font-serif">
+                  「실종아동등의 보호 및 지원에 관한 법률」 제6조제1항 및 같은 법 시행규칙 제3조에 따라<br/>
+                  위와 같이 실종아동등의 신고를 접수합니다.
+                </div>
+
+                <div className="text-right my-6 font-bold text-sm font-serif">
+                  {new Date().toLocaleDateString()}
+                </div>
+
+                <div className="flex justify-between items-center font-bold text-base my-8 font-serif">
+                  <span>경찰관서의 장 귀하</span>
+                  <span className="text-sm">직인생략</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    // =========================================================================
+    // 2단계 모듈: 실종아동 제보 분석 모듈 (TipModule)
+    // =========================================================================
+    function TipModule({ cases, tips, onAddTip, onAddDestructionLog, onUpdateCaseStatus }) {
+      const [tipId] = useState(`TIP-${Math.floor(100000 + Math.random() * 900000)}`);
+      const [sightingLoc, setSightingLoc] = useState("");
+      const [sightingLocDetail, setSightingLocDetail] = useState("");
+      
+      const [sightGender, setSightGender] = useState("미상");
+      const [sightAgeGroup, setSightAgeGroup] = useState("미상");
+      const [sightUpperColor, setSightUpperColor] = useState("");
+      const [sightLowerColor, setSightLowerColor] = useState("");
+      const [sightAcc, setSightAcc] = useState("");
+      const [sightDetail, setSightDetail] = useState("");
+
+      const [matchedCase, setMatchedCase] = useState(null);
+      const [matchScore, setMatchScore] = useState(0);
+      const [feasibilityScore, setFeasibilityScore] = useState(0);
+      const [credibilityScore, setCredibilityScore] = useState(0);
+
+      // 법 제9조의3 동의 및 CBS 긴급발령
+      const [cbsConsent, setCbsConsent] = useState(false);
+      const [boardConsent, setBoardConsent] = useState(false);
+      const [cbsMessage, setCbsMessage] = useState("");
+      const [isCbsSent, setIsCbsSent] = useState(false);
+
+      // AI 비전 분석 자동 묘사 추출 시뮬레이션
+      const handleTriggerVisionMock = () => {
+        setSightGender("남");
+        setSightAgeGroup("어린이");
+        setSightUpperColor("노란색 티셔츠");
+        setSightLowerColor("청바지");
+        setSightAcc("뽀로로 모자");
+        setSightDetail("강남역 개찰구 인근에서 뽀로로 노란 모자를 쓴 꼬마가 벤치에 혼자 울고 있는 모습을 확인하여 제보함.");
+        alert("🤖 [AI 비전 특징 추출 완료]\n제보 사진 속 의복(노란색 티, 청바지, 뽀로로모자) 특징이 자동으로 연동 분석 기입되었습니다.");
+      };
+
+      // 매칭 및 지리 분석 계산기
+      useEffect(() => {
+        if (!sightUpperColor && !sightLowerColor) return;
+        
+        let best = null;
+        let highest = 0;
+
+        cases.forEach(c => {
+          let score = 0;
+          if (sightGender !== "미상" && c.gender === sightGender) score += 20;
+          
+          const age = c.age;
+          let ageGroup = "성인";
+          if (age < 5) ageGroup = "아동";
+          else if (age < 13) ageGroup = "어린이";
+          else if (age < 19) ageGroup = "청소년";
+          else if (age >= 65) ageGroup = "고령층";
+
+          if (sightAgeGroup !== "미상" && ageGroup === sightAgeGroup) score += 20;
+          if (sightUpperColor && c.clothingUpper.includes(sightUpperColor.replace("색", ""))) score += 30;
+          if (sightLowerColor && c.clothingLower.includes(sightLowerColor)) score += 20;
+          if (sightAcc && c.clothingHat.includes(sightAcc)) score += 10;
+
+          if (score > highest) {
+            highest = score;
+            best = c;
+          }
+        });
+
+        setMatchedCase(best);
+        setMatchScore(highest);
+
+        // 지리적 실현가능성 (도심 내 이동)
+        if (best) {
+          let distScore = 95;
+          if (sightingLoc.includes("부산") && best.missingLoc.includes("서울")) {
+            distScore = 5; // 불가능
+          } else if (sightingLoc.includes("수원") && best.missingLoc.includes("서울")) {
+            distScore = 55; // 지하철 타고 의심
+          }
+          setFeasibilityScore(distScore);
+          
+          // 종합 신뢰도 점수
+          const cred = Math.round(highest * 0.6 + distScore * 0.4);
+          setCredibilityScore(cred);
+
+          // CBS 문자 자동 생성
+          const msg = `[경찰청] 실종경보. ${best.name}(남, 만 7세, 118cm, 노란색티, 청바지)를 5.27 06시경 역삼역 인근에서 목격한 분은 182로 제보 바랍니다.`;
+          setCbsMessage(msg);
+        }
+
+      }, [sightGender, sightAgeGroup, sightUpperColor, sightLowerColor, sightAcc, sightingLoc, cases]);
+
+      const handleSendCbs = () => {
+        if (!cbsConsent) {
+          alert("🚨 법정 조항 위배!\n「실종아동법」 제9조의3 제2항에 따라 긴급재난문자(CBS) 발령 요청을 진행하려면 보호자 서면 동의를 반드시 체크 증적해야 합니다.");
+          return;
+        }
+
+        setIsCbsSent(true);
+        onAddTip({
+          id: tipId,
+          targetName: matchedCase.name,
+          sightingLoc: sightingLoc,
+          credibility: credibilityScore >= 80 ? "1순위 긴급" : "2순위 유효",
+          status: "실종경보 발령 전송 완료 (LBS 기지국 전파)"
+        });
+        alert("📡 [실종경보 긴급 전송 승인]\n이동통신 3사를 통한 CBS 실종경보 긴급재난문자가 타깃 지역에 긴급 팩스 송출되었습니다.");
+      };
+
+      const handleCloseCase = () => {
+        const confirmClose = confirm("🚨 대상자를 발견 완료하여 실종경보를 해제하고 수집 정보를 즉시 파기하시겠습니까?");
+        if (confirmClose) {
+          setIsCbsSent(false);
+          setCbsConsent(false);
+          setBoardConsent(false);
+          
+          // 수사 상태 업데이트 ( found )
+          onUpdateCaseStatus(matchedCase.id, "발견완료");
+
+          // 파기대장 등재
+          onAddDestructionLog({
+            id: `DEL-${Math.floor(1000 + Math.random() * 9000)}`,
+            caseId: matchedCase.id,
+            targetName: matchedCase.name,
+            destroyedData: "CCTV 임시 수집본, LBS 기지국 통신사실 기록 일체",
+            destroyedTime: new Date().toLocaleString(),
+            reason: "실종아동법 제9조의3제6항 (실종자 발견 해결에 따른 즉시 파기)",
+            method: "복원 불가능한 덮어쓰기 파기 및 파쇄 소각",
+            status: "영구 폐기(완료)"
+          });
+
+          alert("🔒 [법령 준수 완료]\n실종경보가 해제되었으며, 공개되었던 아동 신상 및 민감 통신자료가 영구 파기되고 파기대장에 적법 증적 기록되었습니다.");
+        }
+      };
+
+      return (
+        <div className="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full text-xs">
+          
+          {/* Left panel: Sighting Intake */}
+          <div className="lg:col-span-7 space-y-5">
+            <div className="glass-panel rounded-xl p-5 border-l-4 border-police-neon">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-sm font-bold text-police-accent">📞 시민 목격 제보 접수 및 AI 이미지 특징 묘사</h2>
+                <button 
+                  onClick={handleTriggerVisionMock}
+                  className="px-3 py-1.5 rounded bg-police-blue border border-police-neon text-white font-bold"
+                >
+                  📸 AI 제보 사진 특징 분석 추출
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1">목격 장소 (Feasibility 검증)</label>
+                  <input type="text" className="w-full p-1.5 rounded glass-input font-bold text-white" placeholder="예: 서울 강남역 5번출구" value={sightingLoc} onChange={(e) => setSightingLoc(e.target.value)} />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-slate-400 mb-1">상세 목격 위치</label>
+                  <input type="text" className="w-full p-1.5 rounded glass-input" placeholder="예: 역사 내 지하 1층 커피숍 앞 벤치" value={sightingLocDetail} onChange={(e) => setSightingLocDetail(e.target.value)} />
+                </div>
+              </div>
+
+              {/* 특징 추출란 */}
+              <div className="border-t border-slate-700/50 pt-3 mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div>
+                  <label className="block text-slate-400 mb-1">목격 성별</label>
+                  <select className="w-full p-1 rounded glass-input" value={sightGender} onChange={(e) => setSightGender(e.target.value)}>
+                    <option value="미상">미상</option>
+                    <option value="남">남</option>
+                    <option value="여">여</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">연령대</label>
+                  <select className="w-full p-1 rounded glass-input" value={sightAgeGroup} onChange={(e) => setSightAgeGroup(e.target.value)}>
+                    <option value="미상">미상</option>
+                    <option value="어린이">어린이</option>
+                    <option value="청소년">청소년</option>
+                    <option value="고령층">고령층</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">상의 특징</label>
+                  <input type="text" className="w-full p-1.5 rounded glass-input" placeholder="노란색 티셔츠" value={sightUpperColor} onChange={(e) => setSightUpperColor(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">하의 특징</label>
+                  <input type="text" className="w-full p-1.5 rounded glass-input" placeholder="청바지" value={sightLowerColor} onChange={(e) => setSightLowerColor(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-slate-400 mb-1">소지품/장신구</label>
+                <input type="text" className="w-full p-1.5 rounded glass-input" placeholder="뽀로로 캡모자" value={sightAcc} onChange={(e) => setSightAcc(e.target.value)} />
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-slate-400 mb-1 font-bold">🚨 목격 정황 기술</label>
+                <textarea className="w-full p-2 rounded glass-input" rows="2" value={sightDetail} onChange={(e) => setSightDetail(e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* Right panel: Sighting analysis & CBS Alerts */}
+          <div className="lg:col-span-5 space-y-5">
+            
+            {/* 과학적 사건 매칭 피드백 */}
+            <div className="glass-panel rounded-xl p-5 border-t-4 border-police-neon">
+              <h3 className="font-bold text-police-accent mb-3 flex items-center gap-1.5">🔬 3. 과학적 제보 매칭 및 지리 검증</h3>
+              {matchedCase ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center bg-police-blue/30 border border-police-neon/50 p-2.5 rounded-lg">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">가장 높은 일치도 실종아동</span>
+                      <strong className="text-white text-sm">{matchedCase.name} ({matchedCase.gender}, 만 {matchedCase.age}세)</strong>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block">인상착의 일치율</span>
+                      <strong className="text-xl font-black text-police-accent font-mono animate-pulse">{matchScore}%</strong>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded bg-slate-900/60 border border-slate-800 leading-relaxed text-[11px]">
+                    <div className="font-bold text-police-accent mb-0.5">🧭 지리적 실현가능성 분석</div>
+                    <p className="text-slate-300">
+                      {feasibilityScore >= 70 ? (
+                        `✅ 지리적 실현도 최상 (목격지 ${sightingLoc} - 실종지 ${matchedCase.missingLoc}). 실종 발생 후 경과 시간 대비 도보 이동권 내에 완벽하게 존재합니다.`
+                      ) : (
+                        `❌ 지리적 이동 불가 경고! 실종지에서 목격지까지 물리적으로 이동이 불가능합니다. 단순 오인 또는 허위 제보 확률이 높습니다.`
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-between items-center bg-slate-900/40 p-2 rounded border border-slate-800">
+                    <div>
+                      <span className="text-[9px] text-slate-400 block">종합 제보 신뢰점수</span>
+                      <strong className="text-white font-mono">{credibilityScore}점</strong>
+                    </div>
+                    <span className="text-police-accent font-bold">
+                      {credibilityScore >= 80 ? "🚨 1순위 긴급 (즉각 대응)" : "🔍 3순위 참고"}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-slate-500 py-6">제보 의복 특징을 입력하시면 과학적 매칭 스캔이 시작됩니다.</p>
+              )}
+            </div>
+
+            {/* 실종경보 발령 (법 제9조의3) */}
+            <div className="glass-panel rounded-xl p-5 border-t-4 border-police-neon">
+              <h3 className="font-bold text-police-accent mb-3">📡 4. 법정 실종경보(CBS) 전송 통제실</h3>
+              
+              <div className="bg-slate-900/60 p-2.5 border border-slate-800 rounded text-[10px] space-y-1.5 mb-3">
+                <span className="text-slate-400 font-bold block mb-1">⚖️ 법정 보호자 동의 증적서류</span>
+                <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                  <input type="checkbox" checked={cbsConsent} onChange={(e) => setCbsConsent(e.target.checked)} />
+                  <span>이동통신사 CBS 긴급재난문자 전송동의서 확보 (법 제9조의3제2항)</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 border-t border-slate-850 pt-1.5">
+                  <input type="checkbox" checked={boardConsent} onChange={(e) => setBoardConsent(e.target.checked)} />
+                  <span>협약기관 전광판/교통 모니터 게시 추가동의서 확보 (시행령 제8항)</span>
+                </label>
+              </div>
+
+              {matchedCase && (
+                <div className="bg-slate-950 p-2 border border-slate-700 rounded text-[10px] text-slate-300 font-mono mb-3">
+                  <span className="text-police-accent font-bold block mb-1">🤖 AI 법정 4대 공개정보 CBS 문자 구성 (시행령 제7항)</span>
+                  <p className="leading-snug">{cbsMessage}</p>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                {!isCbsSent ? (
+                  <button 
+                    onClick={handleSendCbs}
+                    className="w-full py-2 bg-police-neon text-police-900 font-black rounded hover:bg-yellow-500 transition"
+                  >
+                    🛰️ 실종경보(CBS) 긴급 재난문자 전송 승인
+                  </button>
+                ) : (
+                  <button 
+                    onClick={handleCloseCase}
+                    className="w-full py-2 bg-green-600 text-white font-black rounded hover:bg-green-700 transition"
+                  >
+                    🎉 대상자 발견 완료 (경보 해제 & 공개정보 즉각 삭제)
+                  </button>
+                )}
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      );
+    }
+
+    // =========================================================================
+    // 3단계 모듈: 실종아동 수색방법 제안 모듈 (SearchModule)
+    // =========================================================================
+    function SearchModule({ cases, onUpdateCaseStatus }) {
+      const [selectedCaseId, setSelectedCaseId] = useState(cases[0]?.id || "");
+      const [terrainType, setTerrainType] = useState("임야/야산");
+      
+      const [policeUnits, setPoliceUnits] = useState(30);
+      const [searchDogs, setSearchDogs] = useState(3);
+      const [thermalDrones, setThermalDrones] = useState(2);
+      const [volunteers, setVolunteers] = useState(15);
+
+      const [gridData, setGridData] = useState([]);
+      const [selectedCell, setSelectedCell] = useState(null);
+
+      const [isSimulating, setIsSimulating] = useState(false);
+      const [radarActive, setRadarActive] = useState(false);
+      const [logs, setLogs] = useState([]);
+
+      // 코드아담 타이머
+      const [codeAdamActive, setCodeAdamActive] = useState(false);
+      const [codeAdamTimer, setCodeAdamTimer] = useState(600);
+      const timerRef = useRef(null);
+
+      useEffect(() => {
+        if (!selectedCaseId) return;
+        generateGrid();
+      }, [selectedCaseId, terrainType]);
+
+      // 격자 초기화
+      const generateGrid = () => {
+        const activeCase = cases.find(c => c.id === selectedCaseId);
+        if (!activeCase) return;
+
+        let newGrid = [];
+        for (let r = 0; r < 8; r++) {
+          let row = [];
+          for (let c = 0; c < 8; c++) {
+            const coord = `${String.fromCharCode(65 + r)}${c + 1}`;
+            let cellTerrain = "평탄지";
+            let basePoa = 1.0;
+
+            if (terrainType === "임야/야산") {
+              if (r === 2 && c === 3) { cellTerrain = "⛰️ 밀집 산림"; basePoa = 3.0; }
+              else if (r === 5) { cellTerrain = "🍂 급경사지/계곡"; basePoa = 4.0; }
+              else if (r === 3 && c === 3) { cellTerrain = "📍 최후 목격지 (LKP)"; basePoa = 10.0; }
+            } else if (terrainType === "하천/수변공원") {
+              if (c === 4) { cellTerrain = "🌊 깊은 하천 채널"; basePoa = 5.0; }
+              else if (r === 1 && c === 1) { cellTerrain = "📍 최후 목격지 (LKP)"; basePoa = 8.0; }
+            } else if (terrainType === "복합쇼핑몰") {
+              if (r === 0 || c === 0) { cellTerrain = "🚪 외부 출입구"; basePoa = 2.0; }
+              else if (r === 3 && c === 3) { cellTerrain = "📍 최초 소실 지점"; basePoa = 12.0; }
+            }
+
+            row.push({
+              coord, row: r, col: c, terrain: cellTerrain, poa: basePoa, pod: 0, pos: 0,
+              resources: { police: 0, dogs: 0, drones: 0, volunteers: 0 }
+            });
+          }
+          newGrid.push(row);
+        }
+        // 정규화
+        let total = 0;
+        newGrid.forEach(row => row.forEach(cell => { total += cell.poa; }));
+        newGrid.forEach(row => row.forEach(cell => {
+          cell.poa = parseFloat(((cell.poa / total) * 100).toFixed(1));
+        }));
+
+        setGridData(newGrid);
+      };
+
+      // 자원 배치
+      const deployResource = (type, amount) => {
+        if (!selectedCell) return;
+        const { r, c } = selectedCell;
+
+        const updated = [...gridData];
+        const cell = updated[r][c];
+
+        if (type === "police") { setPoliceUnits(prev => prev + cell.resources.police - amount); cell.resources.police = amount; }
+        if (type === "dogs") { setSearchDogs(prev => prev + cell.resources.dogs - amount); cell.resources.dogs = amount; }
+        if (type === "drones") { setThermalDrones(prev => prev + cell.resources.drones - amount); cell.resources.drones = amount; }
+        if (type === "volunteers") { setVolunteers(prev => prev + cell.resources.volunteers - amount); cell.resources.volunteers = amount; }
+
+        // PoD 연산
+        let pod = 0;
+        if (cell.terrain.includes("산림") || cell.terrain.includes("경사지")) {
+          pod = (cell.resources.drones * 45) + (cell.resources.dogs * 35) + (cell.resources.police * 1.8);
+        } else if (cell.terrain.includes("하천") || cell.terrain.includes("채널")) {
+          pod = (cell.resources.dogs * 50) + (cell.resources.drones * 30) + (cell.resources.police * 2.2);
+        } else {
+          pod = (cell.resources.police * 3.5) + (cell.resources.volunteers * 2.5);
+        }
+
+        cell.pod = Math.round(Math.min(95, pod));
+        cell.pos = parseFloat(((cell.poa * cell.pod) / 100).toFixed(1));
+        setGridData(updated);
+      };
+
+      const calculateTotalPos = () => {
+        let total = 0;
+        gridData.forEach(row => row.forEach(cell => { total += cell.pos; }));
+        return parseFloat(total.toFixed(1));
+      };
+
+      // 코드 아담 타이머
+      useEffect(() => {
+        if (codeAdamActive && codeAdamTimer > 0) {
+          timerRef.current = setInterval(() => {
+            setCodeAdamTimer(prev => {
+              if (prev <= 1) {
+                clearInterval(timerRef.current);
+                alert("🚨 [코드 아담 - 10분 골든타임 경과] 지침에 의거하여 경찰 즉시 자동 긴급 이송 신고 완료.");
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        }
+        return () => clearInterval(timerRef.current);
+      }, [codeAdamActive, codeAdamTimer]);
+
+      const startCodeAdam = () => {
+        setCodeAdamActive(true);
+        setCodeAdamTimer(600);
+        alert("🚨 [다중이용시설 코드 아담 발령] 전 경비인력 출입구 통제 감시 배치 및 실시간 방송 송출 개시.");
+      };
+
+      // 수색 시뮬레이션 개시
+      const runSearchSim = () => {
+        setIsSimulating(true);
+        setRadarActive(true);
+        setLogs([]);
+
+        const mockLogs = [
+          { time: "00:00", text: "📡 통합상황실 기동수색대 무전 개통 완료." },
+          { time: "00:30", text: "🛸 정찰용 드론 2호기 계곡 밀집 지형 정밀 적외선 스캔 개시." },
+          { time: "01:15", text: "🐶 [속보] 인명 수색견 갈대밭 수변 C4 격자에서 격렬한 추적 신호 감지!" },
+          { time: "02:00", text: "🎉 [무전] C4 격자 수풀 하단에서 실종대상자 안전 구조 완료! 본부 복귀 처리." }
+        ];
+
+        let i = 0;
+        const interval = setInterval(() => {
+          if (i < mockLogs.length) {
+            setLogs(prev => [...prev, mockLogs[i]]);
+            i++;
+          } else {
+            clearInterval(interval);
+            setIsSimulating(false);
+            setRadarActive(false);
+            onUpdateCaseStatus(selectedCaseId, "발견완료");
+            alert("🎉 [수색 대성공]\n격자 지형 지형과의 완벽한 자원 매칭을 통해 대상을 조기에 발견하였습니다.");
+          }
+        }, 1500);
+      };
+
+      return (
+        <div className="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full text-xs">
+          
+          {/* Left panel: Context */}
+          <div className="lg:col-span-3 space-y-4">
+            <div className="glass-panel rounded-xl p-4 border-l-4 border-police-neon">
+              <h3 className="font-bold text-police-accent mb-2">👤 수색 사건 연동</h3>
+              <select className="w-full p-1.5 rounded glass-input text-xs" value={selectedCaseId} onChange={(e) => setSelectedCaseId(e.target.value)}>
+                {cases.map(c => <option key={c.id} value={c.id}>{c.name} (만 {c.age}세)</option>)}
+              </select>
+            </div>
+
+            <div className="glass-panel rounded-xl p-4 border-l-4 border-amber-500">
+              <h3 className="font-bold text-amber-400 mb-2">🌦️ 수색 지형</h3>
+              <select className="w-full p-1.5 rounded glass-input text-xs" value={terrainType} onChange={(e) => setTerrainType(e.target.value)}>
+                <option value="임야/야산">⛰️ 임야 / 야산</option>
+                <option value="하천/수변공원">🌊 하천 / 수변공원</option>
+                <option value="복합쇼핑몰">🛍️ 복합쇼핑몰 (코드 아담)</option>
+              </select>
+            </div>
+
+            <div className="glass-panel rounded-xl p-4 border-l-4 border-teal-500">
+              <h3 className="font-bold text-teal-400 mb-2">🚒 수색 잔여 자원</h3>
+              <div className="space-y-1 font-mono text-[11px] text-slate-300">
+                <div className="flex justify-between"><span>👮 기동대 인원</span><strong>{policeUnits}명</strong></div>
+                <div className="flex justify-between"><span>🐶 구조 수색견</span><strong>{searchDogs}두</strong></div>
+                <div className="flex justify-between"><span>🛸 열화상 드론</span><strong>{thermalDrones}대</strong></div>
+                <div className="flex justify-between"><span>👥 민간 방범대</span><strong>{volunteers}명</strong></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Middle: Map grid */}
+          <div className="lg:col-span-6 flex flex-col gap-4">
+            <div className="glass-panel rounded-xl p-4 relative flex-grow flex flex-col">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-police-accent">🗺️ 전술 격자 수색 지도 (8x8 Grid Map)</h3>
+                <span className="text-[10px] text-slate-400">누적 수색성공률(Total PoS): <strong className="text-emerald-400 text-sm font-mono">{calculateTotalPos()}%</strong></span>
+              </div>
+
+              <div className="relative border border-slate-700/60 rounded-lg p-2 bg-slate-950 flex-grow flex items-center justify-center min-h-[350px]">
+                {radarActive && <div className="radar-beam"></div>}
+                
+                <div className="grid grid-cols-8 gap-1 w-full max-w-[450px]">
+                  {gridData.map((row, r) => 
+                    row.map((cell, c) => {
+                      let bg = "bg-slate-800/40 border-slate-700";
+                      if (cell.terrain.includes("산림")) bg = "bg-emerald-950/60 border-emerald-800";
+                      else if (cell.terrain.includes("하천")) bg = "bg-sky-950/70 border-sky-800";
+                      else if (cell.terrain.includes("목격지") || cell.terrain.includes("소실")) bg = "bg-red-950 border-red-500";
+
+                      return (
+                        <div 
+                          key={`${r}-${c}`}
+                          onClick={() => setSelectedCell({ r, c })}
+                          className={`aspect-square border rounded p-0.5 flex flex-col justify-between text-[8px] cursor-pointer hover:border-police-neon ${bg} ${selectedCell?.r === r && selectedCell?.c === c ? 'ring-2 ring-police-accent border-police-accent' : ''}`}
+                        >
+                          <div className="flex justify-between font-mono">
+                            <span>{cell.coord}</span>
+                            <span className="text-slate-400">{cell.poa}%</span>
+                          </div>
+                          <div className="flex justify-center gap-0.5 text-[8px]">
+                            {cell.resources.police > 0 && <span>👮</span>}
+                            {cell.resources.drones > 0 && <span>🛸</span>}
+                            {cell.resources.dogs > 0 && <span>🐶</span>}
+                          </div>
+                          <span className="text-right text-[7px] text-emerald-400">{cell.pod > 0 ? `S:${cell.pos}%` : ""}</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Resource deployment selection */}
+              {selectedCell && (
+                <div className="mt-3 p-3 bg-slate-900 border border-slate-800 rounded-lg text-xs">
+                  {(() => {
+                    const cell = gridData[selectedCell.r][selectedCell.c];
+                    return (
+                      <div>
+                        <div className="font-bold text-police-accent mb-2">📍 격자구역: {cell.coord} ({cell.terrain})</div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div>
+                            <label className="block text-slate-400">경찰 (명)</label>
+                            <input type="number" className="w-full p-1 rounded glass-input text-xs" value={cell.resources.police} onChange={(e) => deployResource("police", parseInt(e.target.value) || 0)} />
+                          </div>
+                          <div>
+                            <label className="block text-teal-400">수색견 (두)</label>
+                            <input type="number" className="w-full p-1 rounded glass-input text-xs" value={cell.resources.dogs} onChange={(e) => deployResource("dogs", parseInt(e.target.value) || 0)} />
+                          </div>
+                          <div>
+                            <label className="block text-indigo-400">드론 (대)</label>
+                            <input type="number" className="w-full p-1 rounded glass-input text-xs" value={cell.resources.drones} onChange={(e) => deployResource("drones", parseInt(e.target.value) || 0)} />
+                          </div>
+                          <div>
+                            <label className="block text-amber-400">방범대 (명)</label>
+                            <input type="number" className="w-full p-1 rounded glass-input text-xs" value={cell.resources.volunteers} onChange={(e) => deployResource("volunteers", parseInt(e.target.value) || 0)} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Simulation & Code Adam */}
+          <div className="lg:col-span-3 space-y-4">
+            <div className="glass-panel rounded-xl p-4 border-t-4 border-police-neon">
+              <h3 className="font-bold text-police-accent mb-2">🚀 전술 시뮬레이션 개시</h3>
+              <button 
+                onClick={runSearchSim}
+                disabled={isSimulating || calculateTotalPos() < 15}
+                className="w-full py-2 bg-police-neon text-police-900 font-black rounded text-xs"
+              >
+                격자 스캔 시뮬레이션
+              </button>
+
+              <div className="mt-3 bg-slate-900 p-2 rounded max-h-[100px] overflow-y-auto font-mono text-[9px] text-slate-400 space-y-1">
+                {logs.map((log, index) => (
+                  <div key={index}>[{log.time}] {log.text}</div>
+                ))}
+              </div>
+            </div>
+
+            {/* Code Adam */}
+            <div className="glass-panel rounded-xl p-4 border-t-4 border-amber-500">
+              <h3 className="font-bold text-amber-400 mb-2">🛍️ 코드 아담 통제실 (법 제9조의4)</h3>
+              {terrainType === "복합쇼핑몰" ? (
+                <div className="space-y-2">
+                  <div className="flex justify-between font-mono text-red-500 font-bold">
+                    <span>경찰 자동신고 제한시간</span>
+                    <span>{String(Math.floor(codeAdamTimer/60)).padStart(2,'0')}:{String(codeAdamTimer%60).padStart(2,'0')}</span>
+                  </div>
+                  {!codeAdamActive ? (
+                    <button onClick={startCodeAdam} className="w-full py-1.5 bg-amber-500 text-slate-950 font-black rounded">경보 발령</button>
+                  ) : (
+                    <span className="text-[10px] text-green-400 block text-center font-bold">📡 코드 아담 지침 가동 중</span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-500 text-center py-4">지형을 '복합쇼핑몰'로 선택하십시오.</p>
+              )}
+            </div>
+          </div>
+
+        </div>
+      );
+    }
+
+    // =========================================================================
+    // 4단계 모듈: 실종아동 수사방법 제안 모듈 (InvestModule)
+    // =========================================================================
+    function InvestModule({ cases, destructionLogs, onAddDestructionLog, onUpdateCaseStatus }) {
+      const [selectedCaseId, setSelectedCaseId] = useState(cases[0]?.id || "");
+      const [selectedCase, setSelectedCase] = useState(cases[0]);
+      
+      const [requestType, setRequestType] = useState("신용카드");
+      const [targetAgency, setTargetAgency] = useState("");
+      const [requestedDetails, setRequestedDetails] = useState("");
+
+      const [smsText, setSmsText] = useState("");
+      const [activeStep, setActiveStep] = useState(0);
+      const [logs, setLogs] = useState([]);
+
+      const isCaseClosed = selectedCase?.status === "발견완료";
+
+      useEffect(() => {
+        const item = cases.find(c => c.id === selectedCaseId);
+        setSelectedCase(item);
+      }, [selectedCaseId, cases]);
+
+      useEffect(() => {
+        if (!requestType) return;
+        let agency = "BC카드 대표이사";
+        let detail = "실종자 명의 신용/체크카드 사용일시 및 장소 (※ 결제 금액 및 품목 제외 - 제9조의2 한계 락)";
+        if (requestType === "CCTV") {
+          agency = "서울교통공사 사장";
+          detail = "LKP 인근 강남역 2번 출구 출입구 고정형 CCTV 영상자료";
+        } else if (requestType === "교통카드") {
+          agency = "티머니 대표이사";
+          detail = "교통카드 지하철 승하차 시각 및 역명 사용명세 이력";
+        }
+        setTargetAgency(agency);
+        setRequestedDetails(detail);
+
+        if(selectedCase) {
+          const sms = `[경찰서 스마트수사대] 귀하가 신고하신 실종대상자 ${selectedCase.name} 관련, 실종법 제9조의2제3항에 따라 관계기관(${agency.split(" ")[0]})으로부터 수사 생활정보를 수집하였습니다. 본 정보는 아동 발견 즉시 파기될 예정입니다.`;
+          setSmsText(sms);
+        }
+      }, [requestType, selectedCase]);
+
+      // 수사 추적 단계별 진행 시뮬레이션 (SVG 지도용)
+      const handleTriggerStep = () => {
+        const next = activeStep + 1;
+        if (next > 4) return;
+        setActiveStep(next);
+
+        let newLog = {};
+        if (next === 1) {
+          newLog = { step: 1, time: "10:15", title: "교통카드 역 승하차 역 포착", desc: "신분당선 강남역 승차 -> 7호선 강남구청역 하차 기록 식별 완료 (법 제9조의2제1항제2호)." };
+        } else if (next === 2) {
+          newLog = { step: 2, time: "11:00", title: "신용카드 결제처 포착", desc: "비씨카드 결제 위치: 강남구청역 지하상가 편의점 결제 감지 (금액 미기재 - 법정 락)." };
+        } else if (next === 3) {
+          newLog = { step: 3, time: "11:30", title: "지하철역 CCTV 판독 완료", desc: "GS25 인근 2번 보도 CCTV 판독: 노란색 옷차림 대상자가 개찰구 밖 쉼터 방향으로 나가는 모습 식별 (법 제9조의2제1항제1호)." };
+        } else if (next === 4) {
+          newLog = { step: 4, time: "12:15", title: "스마트 수사망 발견 보호 완료", desc: "강남구청역 쉼터 로비 입구 대기실에서 대기중인 실종아동 발견 및 보호 인계." };
+        }
+
+        setLogs(prev => [...prev, newLog]);
+      };
+
+      const handleCloseCase = () => {
+        const confirmClose = confirm("🚨 대상자를 발견 종결하여 임시 확보한 모든 수사 생활정보 데이터를 영구 파기하시겠습니까?");
+        if (confirmClose) {
+          onUpdateCaseStatus(selectedCaseId, "발견완료");
+          setActiveStep(0);
+          setLogs([]);
+
+          onAddDestructionLog({
+            id: `DEL-${Math.floor(1000 + Math.random() * 9000)}`,
+            caseId: selectedCase.id,
+            targetName: selectedCase.name,
+            destroyedData: "CCTV 임시 수집본, LBS 기지국 통신사실 기록, 신용카드 결제위치 일체",
+            destroyedTime: new Date().toLocaleString(),
+            reason: "실종아동법 제9조의2제2항 (실종자 발견 해결에 따른 즉시 파기)",
+            method: "복원 불가능한 덮어쓰기 파기 및 파쇄 소각",
+            status: "영구 폐기(완료)"
+          });
+
+          alert("🔒 [법령 준수 처리 완료]\n수집된 모든 민감 정보가 영구 파기 소멸되었으며, 파기대장에 정식 증적 등재되었습니다.");
+        }
+      };
+
+      return (
+        <div className="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full text-xs">
+          
+          {/* Left: Input requests */}
+          <div className="lg:col-span-4 space-y-4">
+            <div className="glass-panel rounded-xl p-4 border-l-4 border-police-neon">
+              <h3 className="font-bold text-police-accent mb-2">👤 수사 사건 매핑</h3>
+              <select className="w-full p-1.5 rounded glass-input text-xs" value={selectedCaseId} onChange={(e) => setSelectedCaseId(e.target.value)}>
+                {cases.map(c => <option key={c.id} value={c.id}>{c.name} ({c.id})</option>)}
+              </select>
+            </div>
+
+            <div className="glass-panel rounded-xl p-4 border-l-4 border-amber-500">
+              <h3 className="font-bold text-amber-400 mb-2">📄 법 제9조의2 정보제공요청서 기안</h3>
+              <div className="space-y-3">
+                <select className="w-full p-1.5 rounded glass-input text-xs font-bold" value={requestType} onChange={(e) => setRequestType(e.target.value)}>
+                  <option value="신용카드">💳 신용/체크카드 사용일시/장소</option>
+                  <option value="CCTV">📹 CCTV 영상자료 제공요청</option>
+                  <option value="교통카드">🚇 교통카드 승하차 사용명세</option>
+                </select>
+
+                <div className="p-2 bg-red-950/40 border border-red-500/40 rounded text-[10px] text-red-300">
+                  {requestType === "신용카드" && "🔒 신용카드 사용일시와 사용장소만 요청 가능 (금액 및 품목 요청 차단 락 가동)"}
+                  {requestType === "CCTV" && "LBS 좌표 및 전방위 CCTV를 통해 획득한 영상 정보 제공 청구"}
+                </div>
+
+                <input type="text" className="w-full p-1.5 rounded glass-input text-xs" value={targetAgency} readOnly />
+                <textarea className="w-full p-1.5 rounded glass-input text-[10px]" rows="2" value={requestedDetails} readOnly />
+              </div>
+            </div>
+          </div>
+
+          {/* Middle: SVG route map */}
+          <div className="lg:col-span-4 flex flex-col gap-4">
+            <div className="glass-panel rounded-xl p-4 flex-grow flex flex-col">
+              <h3 className="font-bold text-police-accent mb-3">📡 실시간 스마트 수사 추적 경로망 (전술 지도)</h3>
+              
+              <div className="border border-slate-700/60 rounded-lg p-2 bg-slate-950 flex-grow flex items-center justify-center min-h-[250px]">
+                <svg className="w-full h-full max-h-[300px]" viewBox="0 0 350 300">
+                  {/* LKP (강남역 놀이터) */}
+                  <circle cx="60" cy="220" r="14" fill="#1e293b" stroke="#ef4444" strokeWidth="2" />
+                  <text x="60" y="223" fontSize="9" fill="#ffffff" textAnchor="middle">LKP</text>
+
+                  {/* Subway Node */}
+                  {activeStep >= 1 && (
+                    <g>
+                      <line x1="60" y1="206" x2="140" y2="140" stroke="#6366f1" strokeWidth="2" strokeDasharray="3" />
+                      <circle cx="140" cy="140" r="12" fill="#1e293b" stroke="#6366f1" strokeWidth="2" />
+                      <text x="140" y="143" fontSize="9" fill="#ffffff" textAnchor="middle">🚇</text>
+                    </g>
+                  )}
+
+                  {/* Store Node */}
+                  {activeStep >= 2 && (
+                    <g>
+                      <line x1="140" y1="128" x2="220" y2="80" stroke="#6366f1" strokeWidth="2" strokeDasharray="3" />
+                      <circle cx="220" cy="80" r="12" fill="#1e293b" stroke="#f59e0b" strokeWidth="2" />
+                      <text x="220" y="83" fontSize="9" fill="#ffffff" textAnchor="middle">💳</text>
+                    </g>
+                  )}
+
+                  {/* CCTV Node */}
+                  {activeStep >= 3 && (
+                    <g>
+                      <line x1="220" y1="68" x2="290" y2="60" stroke="#6366f1" strokeWidth="2" strokeDasharray="3" />
+                      <circle cx="290" cy="60" r="12" fill="#1e293b" stroke="#8b5cf6" strokeWidth="2" />
+                      <text x="290" y="63" fontSize="9" fill="#ffffff" textAnchor="middle">📹</text>
+                    </g>
+                  )}
+
+                  {/* Safe Point */}
+                  {activeStep >= 4 && (
+                    <g className="animate-bounce">
+                      <line x1="290" y1="72" x2="240" y2="180" stroke="#10b981" strokeWidth="2.5" />
+                      <circle cx="240" cy="180" r="15" fill="#064e3b" stroke="#10b981" strokeWidth="3" />
+                      <text x="240" y="184" fontSize="10" fill="#ffffff" textAnchor="middle">🏠</text>
+                    </g>
+                  )}
+                </svg>
+              </div>
+
+              <div className="flex gap-2 mt-3">
+                <button onClick={handleTriggerStep} disabled={activeStep >= 4 || isCaseClosed} className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded">
+                  👣 다음 추적 단서 확보
+                </button>
+                <button onClick={handleCloseCase} disabled={activeStep < 4 || isCaseClosed} className="w-1/2 py-2 bg-green-600 text-white font-bold rounded">
+                  사건 발견 종결
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: SMS notification & Logs */}
+          <div className="lg:col-span-4 space-y-4">
+            <div className="glass-panel rounded-xl p-4 border-t-4 border-police-neon">
+              <h3 className="font-bold text-police-accent mb-2">📬 3. 보호자 긴급 의무 통지실 (제3항)</h3>
+              <p className="text-[10px] text-slate-500 mb-2 leading-relaxed">
+                법 제9조의2제3항에 따라 수집 즉시 보호자에게 수집 장소와 파기예정일을 SMS 통지해야 할 법적 의무가 수반됩니다.
+              </p>
+              <textarea className="w-full bg-slate-950 p-2 border border-slate-800 rounded text-[10px] text-white leading-normal h-20 mb-3" value={smsText} readOnly />
+              <button 
+                onClick={() => {
+                  alert("✉️ [보호자 통지 발송 완료]\n법정 규격에 의한 수집 고지가 보호자 휴대폰으로 전송 완료되었습니다.");
+                }} 
+                disabled={activeStep === 0}
+                className="w-full py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded"
+              >
+                보호자 의무 고지 SMS 전송
+              </button>
+            </div>
+          </div>
+
+        </div>
+      );
+    }
+
+    // =========================================================================
+    // 5단계 모듈: 실종자 가족 지원 및 유전자 등록 모듈 (FamilyModule)
+    // =========================================================================
+    function FamilyModule({ cases, destructionLogs, onAddDestructionLog, onUpdateCaseStatus }) {
+      const [selectedFamilyId, setSelectedFamilyId] = useState(FAMILY_DB[0].id);
+      const [selectedFamily, setSelectedFamily] = useState(FAMILY_DB[0]);
+
+      const [preCheckDone, setPreCheckDone] = useState(false);
+      const [preCheckLog, setPreCheckLog] = useState("");
+      
+      const [consentDna, setConsentDna] = useState(false);
+      const [consentDualData, setConsentDualData] = useState(false);
+      const [consentResample, setConsentResample] = useState(false);
+
+      const [flyerAge, setFlyerAge] = useState(7);
+      const [agePhoto, setAgePhoto] = useState("");
+
+      const [dnaScanning, setDnaScanning] = useState(false);
+      const [reunionMatched, setReunionMatched] = useState(false);
+
+      useEffect(() => {
+        const item = FAMILY_DB.find(f => f.id === selectedFamilyId);
+        setSelectedFamily(item);
+        setFlyerAge(item.missingAgeAtLoss);
+        setAgePhoto(item.childPhotoUrlAtLoss);
+        setPreCheckDone(false);
+        setPreCheckLog("");
+        setConsentDna(false);
+        setConsentDualData(false);
+        setConsentResample(false);
+        setReunionMatched(false);
+      }, [selectedFamilyId]);
+
+      // 나이 변환 이미지 연동 시뮬레이터 (WOW 기능)
+      useEffect(() => {
+        if (!selectedFamily) return;
+        const gap = flyerAge - selectedFamily.missingAgeAtLoss;
+        setAgePhoto(gap > 5 ? selectedFamily.childPhotoUrlAgedUp : selectedFamily.childPhotoUrlAtLoss);
+      }, [flyerAge, selectedFamily]);
+
+      const handlePreCheck = () => {
+        setPreCheckLog("국과수 데이터베이스 조회 중...");
+        setTimeout(() => {
+          setPreCheckDone(true);
+          setPreCheckLog("✅ 사전 등록 내역 없음 확인. 신규 유전자 등록 진행 가능 (법 제11조제3항 충족).");
+        }, 1200);
+      };
+
+      const handleRunDnaMatch = () => {
+        if (!preCheckDone || !consentDna) {
+          alert("사전 DB 스캔과 서면 동의 징구가 완료되어야 DNA 매칭 개시가 허용됩니다.");
+          return;
+        }
+        setDnaScanning(true);
+        setTimeout(() => {
+          setDnaScanning(false);
+          setReunionMatched(true);
+          alert(`🚨 [국과수 DNA 매칭 성공!]\n신청 가족의 DNA와 아동보호소 무연고 입소자 '김성진'(당시 7세)의 DNA가 99.999% 일치하는 것으로 판명되었습니다!`);
+        }, 2500);
+      };
+
+      const handleReunionComplete = () => {
+        const confirmClear = confirm("🎉 친가족 상봉 완료에 따라 법 제13조제2항제1호에 의거 국과수 보관 유전정보를 즉시 지체 없이 영구 파기하시겠습니까?");
+        if (confirmClear) {
+          setReunionMatched(false);
+
+          onAddDestructionLog({
+            id: `DNA-DEL-${Math.floor(1000 + Math.random() * 9000)}`,
+            applicant: selectedFamily.parentName,
+            relation: selectedFamily.relation,
+            targetName: selectedFamily.missingChildName,
+            destroyedType: "검사대상물(타액시료) 및 국과수 DB 유전체 정보 일체",
+            destroyedTime: new Date().toLocaleString(),
+            reason: "법 제13조제2항제1호 (실종아동등 보호자 확인에 따른 즉시 지체 없는 폐기)",
+            method: "NFS 유전체 데이터 완전 하드삭제(Wipe) 및 동의서 소각",
+            status: "영구 폐기(완료)"
+          });
+
+          alert("🔒 [법령 의무 완료]\n친자 관계 확인에 따라 모든 유전 정보의 지체 없는 즉시 파기가 국과수 연동망을 통해 집행 완료되었습니다.");
+        }
+      };
+
+      return (
+        <div className="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full text-xs">
+          
+          {/* Left panel: Dna registration */}
+          <div className="lg:col-span-4 space-y-4">
+            <div className="glass-panel rounded-xl p-4 border-l-4 border-police-neon">
+              <h3 className="font-bold text-police-accent mb-2">👪 1. 장기 실종 가족 대상자</h3>
+              <select className="w-full p-1.5 rounded glass-input text-xs" value={selectedFamilyId} onChange={(e) => setSelectedFamilyId(e.target.value)}>
+                {FAMILY_DB.map(f => <option key={f.id} value={f.id}>{f.parentName} (찾는 아동: {f.missingChildName})</option>)}
+              </select>
+            </div>
+
+            <div className="glass-panel rounded-xl p-4 border-l-4 border-amber-500">
+              <h3 className="font-bold text-amber-400 mb-2">🧬 2. 유전자 채취 법적 동의</h3>
+              <div className="space-y-3">
+                <div className="bg-slate-900/60 p-2 border border-slate-800 rounded">
+                  <span className="text-[9px] text-slate-500 block mb-1">법 제11조제3항: DB 사전조회 의무</span>
+                  <button onClick={handlePreCheck} className="w-full py-1 bg-slate-800 text-white text-[10px] rounded">기 등록 유전자 확인</button>
+                  {preCheckLog && <p className="text-[9px] text-teal-400 mt-1 font-mono">{preCheckLog}</p>}
+                </div>
+
+                <div className={preCheckDone ? "space-y-2 text-[10px] text-slate-300" : "opacity-30 pointer-events-none space-y-2 text-[10px]"}>
+                  <label className="flex items-center gap-1.5">
+                    <input type="checkbox" checked={consentDna} onChange={(e) => setConsentDna(e.target.checked)} />
+                    <span>유전자 대상물 채취 및 검사동의 (제11조제4항)</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 border-t border-slate-850 pt-1.5">
+                    <input type="checkbox" checked={consentDualData} onChange={(e) => setConsentDualData(e.target.checked)} />
+                    <span>국과수-보장원 정보 이원화 관리동의 (제11조제5항)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Middle: AI Flyer */}
+          <div className="lg:col-span-5 flex flex-col gap-4">
+            <div className="glass-panel rounded-xl p-4 flex-grow flex flex-col">
+              <h3 className="font-bold text-police-accent mb-2">🖼️ AI 나이 변환 전단지 제작기 (Age Progression)</h3>
+              
+              <div className="bg-slate-900/60 p-2.5 border border-slate-800 rounded text-xs mb-3">
+                <div className="flex justify-between items-center mb-1 text-slate-400">
+                  <span>🕰️ 나이 변환 시뮬레이션 슬라이더</span>
+                  <strong className="text-police-pink animate-pulse">만 {flyerAge}세 변환</strong>
+                </div>
+                <input 
+                  type="range" 
+                  min={selectedFamily.missingAgeAtLoss}
+                  max={selectedFamily.missingAgeAtLoss + 15}
+                  className="w-full"
+                  value={flyerAge}
+                  onChange={(e) => setFlyerAge(parseInt(e.target.value))}
+                />
+              </div>
+
+              {/* Graphic Flyer */}
+              <div className="border border-gray-400 bg-white text-black p-4 rounded-lg flex-grow flex flex-col justify-between max-w-[340px] mx-auto text-[10px]">
+                <div className="bg-red-600 text-white font-extrabold text-center py-1 text-xs mb-2">🚨 실종아동을 찾습니다! (국가 182 전파)</div>
+                <div className="grid grid-cols-12 gap-3">
+                  <div className="col-span-5">
+                    <div className="w-full h-36 border border-gray-400 bg-gray-100 flex items-center justify-center overflow-hidden relative">
+                      <img src={agePhoto} className="object-cover w-full h-full" alt="전단지용 사진" />
+                      {flyerAge > selectedFamily.missingAgeAtLoss && <span className="absolute bottom-0 inset-x-0 bg-police-pink text-white text-[8px] text-center">AI 나이 변환 몽타주</span>}
+                    </div>
+                  </div>
+                  <div className="col-span-7 space-y-1">
+                    <div>성명: <strong className="text-black text-xs font-serif">{selectedFamily.missingChildName}</strong></div>
+                    <div>성별: <strong>{selectedFamily.id.includes("098") ? "남성" : "여성"}</strong></div>
+                    <div>특징: <p className="text-gray-600 text-[8px] leading-snug">{selectedFamily.specialFeatures}</p></div>
+                  </div>
+                </div>
+                <div className="border-t border-dashed border-gray-400 pt-2 mt-2 flex justify-between items-center">
+                  <span className="text-[8px] text-gray-500">목격 제보 시 즉시 국번 없이 182</span>
+                  <div className="w-8 h-8 bg-gray-200 flex items-center justify-center font-bold">QR</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: DNA Reunion Matching */}
+          <div className="lg:col-span-3 space-y-4">
+            <div className="glass-panel rounded-xl p-4 border-t-4 border-police-neon">
+              <h3 className="font-bold text-police-accent mb-2">🧬 국과수 DNA 매칭 스캔</h3>
+              {dnaScanning ? (
+                <div className="text-center py-4 font-mono font-bold animate-pulse">DNA SCANNING...</div>
+              ) : (
+                <div>
+                  {reunionMatched ? (
+                    <div className="space-y-3 text-xs">
+                      <div className="bg-police-pink/20 border border-police-pink p-2 text-center text-police-pink font-bold rounded animate-pulse">
+                        🚨 DNA 일치 발견 (99.99%)!
+                      </div>
+                      <button onClick={handleReunionComplete} className="w-full py-2 bg-green-600 text-white font-bold rounded">
+                        상봉 완료 및 DNA 즉시 영구 파기
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={handleRunDnaMatch} disabled={!consentDna} className="w-full py-2 bg-police-neon text-police-900 font-black rounded">
+                      DNA 매칭 비교 개시
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<UnifiedPortal />);
+  </script>
+</body>
+</html>

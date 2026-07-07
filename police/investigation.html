@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>실종아동 스마트 수사 지휘 및 정보제공요청 시스템</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS config for customized police dashboard palette (Indigo/Purple theme for Smart Investigation) -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            police: {
+              900: '#0b0f19',
+              800: '#111827',
+              700: '#1f2937',
+              600: '#374151',
+              blue: '#1e3a8a',
+              neon: '#6366f1', // Indigo/Purple glow for smart investigation
+              accent: '#818cf8',
+              amber: '#f59e0b',
+              crimson: '#ef4444',
+              violet: '#8b5cf6'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- React & ReactDOM (React 18) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <!-- Babel Compiler for in-browser JSX parsing -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin="anonymous"></script>
+  
+  <!-- Google Fonts: Inter & Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0b0f19;
+      color: #e5e7eb;
+      overflow-x: hidden;
+    }
+    
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b0f19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f2937;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #6366f1;
+    }
+
+    /* Glassmorphism utility */
+    .glass-panel {
+      background: rgba(17, 24, 39, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(99, 102, 241, 0.15); /* Indigo border */
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    
+    .glass-input {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #f3f4f6;
+      transition: all 0.2s ease-in-out;
+    }
+    
+    .glass-input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+      outline: none;
+    }
+
+    .neon-text-glow {
+      text-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+    }
+
+    .neon-border-glow:hover {
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    /* Scanline Animation */
+    @keyframes scan {
+      0% { top: 0%; }
+      50% { top: 100%; }
+      100% { top: 0%; }
+    }
+    .scan-line {
+      position: absolute;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(180deg, transparent, rgba(99, 102, 241, 0.8), transparent);
+      animation: scan 4s linear infinite;
+      pointer-events: none;
+    }
+
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        font-family: 'Batang', 'Times New Roman', serif !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-area {
+        display: block !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- React root mount point -->
+  <div id="root"></div>
+
+  <!-- Core App Code in Babel JSX -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // --- ACTIVE CASES ---
+    const MOCK_CASES = [
+      {
+        id: "2026-MP-098234",
+        name: "김민우",
+        age: 7,
+        gender: "남",
+        type: "아동 (가목)",
+        missingLoc: "서울 강남역 3번출구 놀이터",
+        guardianName: "김철수",
+        guardianContact: "010-1234-5678"
+      },
+      {
+        id: "2026-MP-154930",
+        name: "이하은",
+        age: 11,
+        gender: "여",
+        type: "아동 (가목)",
+        missingLoc: "부산 해운대 해수욕장 입구 광장",
+        guardianName: "박지영",
+        guardianContact: "010-8765-4321"
+      },
+      {
+        id: "2026-MP-982134",
+        name: "박진우",
+        age: 30,
+        gender: "남",
+        type: "지적장애인 (나목)",
+        missingLoc: "인천 구월동 빌라 골목",
+        guardianName: "박태형",
+        guardianContact: "010-5555-4444"
+      },
+      {
+        id: "2026-MP-445832",
+        name: "최순임",
+        age: 81,
+        gender: "여",
+        type: "치매환자 (다목)",
+        missingLoc: "경기 수원역 동측 광장 버스정류장",
+        guardianName: "최성호",
+        guardianContact: "010-9999-8888"
+      }
+    ];
+
+    function InvestApp() {
+      // --- STATE MANAGEMENT ---
+      const [selectedCaseId, setSelectedCaseId] = useState(MOCK_CASES[0].id);
+      const [selectedCase, setSelectedCase] = useState(MOCK_CASES[0]);
+
+      // 법 제9조의2 정보제공요청서 입력값
+      const [requestType, setRequestType] = useState("신용카드"); // CCTV, 교통카드, 신용카드, 진료기록
+      const [targetAgency, setTargetAgency] = useState("BC카드 주식회사 대표이사");
+      const [requestReason, setRequestReason] = useState("실종아동등의 수색 및 조기 발견을 위한 신용카드 최종 사용지 확인용.");
+      const [requestedDetails, setRequestedDetails] = useState("실종자 명의 BC카드 사용일시 및 사용장소(여신전문금융업법 제2조에 따른 신용카드/체크카드 일체)");
+
+      // 공문서 서식용 접수자 정보
+      const [deptHead, setDeptHead] = useState("서울강남경찰서장");
+      const [officerDept, setOfficerDept] = useState("여성청소년과 실종수사팀");
+      const [officerName, setOfficerName] = useState("홍성삼");
+
+      // 보호자 긴급 의무 통지 상태 (제3항)
+      const [smsText, setSmsText] = useState("");
+      const [smsLogs, setSmsLogs] = useState([]);
+      const [isSmsSent, setIsSmsSent] = useState(false);
+
+      // 의사결정 대안 및 전술 수사 매트릭스
+      const [selectedTactic, setSelectedTactic] = useState("");
+      const [tacticJustification, setTacticJustification] = useState("");
+
+      // 실시간 수계적 타임라인 및 SVG 전술 맵
+      const [activeStep, setActiveStep] = useState(0); // 0~4 수사 단계
+      const [investigationLogs, setInvestigationLogs] = useState([
+        { step: 0, time: "09:00", icon: "👮", title: "112 신고 접수 완료", desc: "강남역 놀이터에서 김민우(만 7세) 실종 접수 및 LKP(최초 소실지) 확정." }
+      ]);
+
+      // 발견 완료 데이터 영구 파기 장부 (시행령 제4조의5 제3항 만족)
+      const [isCaseClosed, setIsCaseClosed] = useState(false);
+      const [destructionLogs, setDestructionLogs] = useState([]);
+      const [showDestructionLog, setShowDestructionLog] = useState(false);
+
+      // 인쇄용 미리보기 모달 상태
+      const [showPrintModal, setShowPrintModal] = useState(false);
+
+      // --- EFFECTS & LOGIC ---
+
+      // 사건 변경 시
+      useEffect(() => {
+        const caseItem = MOCK_CASES.find(c => c.id === selectedCaseId);
+        setSelectedCase(caseItem);
+        
+        // 사건이 리셋되면 수사 단계도 리셋
+        setActiveStep(0);
+        setInvestigationLogs([
+          { step: 0, time: "09:00", icon: "👮", title: "112 신고 접수 완료", desc: `LKP(최초 소실지): ${caseItem.missingLoc} 에서 대상자 실종 접수 완료.` }
+        ]);
+        setIsCaseClosed(false);
+        setIsSmsSent(false);
+      }, [selectedCaseId]);
+
+      // 정보제공 유형 변경 시 법정 한계 락(Lock) 및 안내 문구 자동 제안 (엄격 준수)
+      useEffect(() => {
+        let agency = "BC카드 주식회사 대표이사";
+        let detail = "실종자 명의 신용/체크카드 사용일시 및 사용장소 (※ 법률 제9조의2에 따라 결제 금액 및 결제 품목 정보는 제외됨)";
+        
+        if (requestType === "CCTV") {
+          agency = "서울교통공사 사장";
+          detail = "최종 목격 시간 전후 강남역 승강장 및 지하보도 CCTV 영상 녹화 자료";
+        } else if (requestType === "교통카드") {
+          agency = "티머니 주식회사 대표이사";
+          detail = "실종자 소지 교통카드 사용명세 (사용 일시, 지하철/버스 승하차 역명 및 차량 번호 일체)";
+        } else if (requestType === "진료기록") {
+          agency = "국민건강보험공단 이사장";
+          detail = "실종자의 처방전에 기재된 의료기관 명칭·전화번호 및 진료기록부상의 진료 일시 (※ 법률 제9조의2에 따라 상세 병명 및 약처방 정보는 수집 불가함)";
+        }
+
+        setTargetAgency(agency);
+        setRequestedDetails(detail);
+        
+        // AI 보호자 문자메시지 초안 작성 (제3항)
+        const caseItem = MOCK_CASES.find(c => c.id === selectedCaseId);
+        const requestWord = requestType === "CCTV" ? "CCTV 영상자료" : requestType === "교통카드" ? "교통카드 승하차 내역" : requestType === "신용카드" ? "신용카드 승인장소" : "병원 처방일시";
+        
+        const sms = `[강남경찰서 스마트수사대] 귀하가 신고하신 실종대상자 ${caseItem.name} 관련, 실종법 제9조의2 제3항에 근거하여 관계기관(${agency.split(" ")[0]})으로부터 수사 생활정보[${requestWord}]를 지체 없이 수집하였습니다. 본 정보는 아동 발견 즉시 파기될 예정입니다.`;
+        setSmsText(sms);
+
+      }, [requestType, selectedCaseId]);
+
+      // 수사 정보 수집 집행 시뮬레이터 (동선 타임라인에 한 단계씩 추가)
+      const handleTriggerInvestStep = () => {
+        if (isCaseClosed) {
+          alert("이미 사건이 발견되어 종결되었습니다. 새로운 수사를 위해 사건을 다시 선택하십시오.");
+          return;
+        }
+
+        const next = activeStep + 1;
+        if (next > 4) {
+          alert("수사가 최종 단계에 도달했습니다. '사건 발견 완료' 버튼을 클릭하여 종결 처리하십시오.");
+          return;
+        }
+
+        setActiveStep(next);
+
+        let newLog = {};
+        if (next === 1) {
+          newLog = {
+            step: 1, time: "10:15", icon: "🚇",
+            title: "교통카드 동선 수집 완료",
+            desc: "교통공사 연계 분석 결과: 신분당선 강남역 승차 -> 7호선 강남구청역 하차 이력 10:15 포착 (법 제9조의2제1항제2호)."
+          };
+          // 보호자 문자 자동 발송 유도 알림
+          alert("🚇 [교통카드 내역 확보 완료]\n지하철 개찰구 하차 기록이 확인되었습니다. 수집 즉시 보호자에게 SMS 통지 의무가 발생합니다. (법 제9조의2 제3항)");
+        } else if (next === 2) {
+          newLog = {
+            step: 2, time: "11:00", icon: "💳",
+            title: "신용카드 최종 사용지 확보",
+            desc: "BC카드사 결제장소 분석: 강남구청역 내 GS25 편의점 결제 확인 (금액/품목 미수집 - 법정 엄격 제한 준수)."
+          };
+          alert("💳 [신용카드 가맹점 확인 완료]\nGS25 강남구청역점 결제 사실이 식별되었습니다. 법령에 따라 사용금액 및 물품 내역 수집은 원천 차단되었습니다.");
+        } else if (next === 3) {
+          newLog = {
+            step: 3, time: "11:30", icon: "📹",
+            title: "현장 CCTV 정밀 분석",
+            desc: "강남구청역 개찰구 CCTV 판독: 노란색 상의 착용 대상자가 출구 2번을 통해 청소년 쉼터 방향으로 보행하는 모습 식별 (법 제9조의2제1항제1호)."
+          };
+          alert("📹 [CCTV 영상 판독 완료]\n대상자의 실시간 보행 인상착의와 방향이 특정되었습니다. 수색조를 해당 방향으로 즉시 급파합니다.");
+        } else if (next === 4) {
+          newLog = {
+            step: 4, time: "12:15", icon: "🎉",
+            title: "수사 추적 완료 - 발견 및 보호",
+            desc: "최종 좌표 특정: 강남구청역 인근 청소년 쉼터 로비 내부에서 배회 중인 대상자 안전 보호 확인."
+          };
+          alert("🎉 [실종자 발견 완료!]\n스마트 수사망 동선 추적을 통해 청소년 쉼터에서 대상자를 무사 구출하였습니다.");
+        }
+
+        setInvestigationLogs(prev => [...prev, newLog]);
+      };
+
+      // 보호자 SMS 전송 승인 (법 제9조의2 제3항)
+      const handleSendSms = () => {
+        setIsSmsSent(true);
+        const newLog = {
+          time: new Date().toLocaleTimeString(),
+          recipient: `${selectedCase.guardianName} (${selectedCase.guardianContact})`,
+          content: smsText,
+          status: "전송성공(수신완료)"
+        };
+        setSmsLogs(prev => [newLog, ...prev]);
+        alert(`📬 [보호자 의무 통지 전송 완료]\n보호자(${selectedCase.guardianName})에게 법정 고지 사항 및 파기예정 고지가 안전하게 SMS 전송되었습니다.\n(행정안전부령 제4조의5 제4항 준수)`);
+      };
+
+      // 사건 해결 및 수집 정보 영구 파기 (제2항)
+      const handleCloseInvestigation = () => {
+        if (activeStep < 4) {
+          alert("실종자를 아직 발견하지 못해 종결 처리가 불가능합니다. 수사를 진척시키십시오.");
+          return;
+        }
+
+        const confirmClose = confirm("🚨 스마트 수사 작전을 종료하겠습니까?\n종결 시 법 제9조의2 제2항에 따라 수집된 모든 CCTV 영상, 교통/신용카드 사용 기록, 진료 기록은 즉각 '복원이 불가능한 기술적 방법'으로 영구 파기되며 파기기록대장에 로그가 박제됩니다.");
+        
+        if (confirmClose) {
+          setIsCaseClosed(true);
+
+          // 파기대장 로그 기록 (시행령 제4조의5 제3항 만족)
+          const newDestructionLog = {
+            id: `DEL-${Math.floor(1000 + Math.random() * 9000)}`,
+            caseId: selectedCase.id,
+            targetName: selectedCase.name,
+            destroyedData: "CCTV 동영상 파일, 교통카드 승하차 노선 이력, 신용카드 가맹점 장소 내역 일체",
+            destroyedTime: new Date().toLocaleString(),
+            destroyer: `${officerDept} ${officerName}`,
+            method: "행안부령 의거 전자적 파일 영구 오버라이트(Shredding) 및 서면 출력 자료 분쇄 소각",
+            status: "영구 파기 (복구 절대 불가)"
+          };
+
+          setDestructionLogs(prev => [newDestructionLog, ...prev]);
+          setShowDestructionLog(true);
+
+          alert("🔒 [법령 준수 완료]\n1. 임시 수집된 CCTV 및 카드사 생활정보가 안전하게 영구 소멸되었습니다.\n2. 개인위치정보 파기대장 양식에 맞춰 증적이 기록 보관되었습니다.");
+        }
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col relative pb-10">
+          <div className="scan-line no-print"></div>
+
+          {/* --- HEADER --- */}
+          <header className="glass-panel no-print border-b border-police-neon/30 p-4 sticky top-0 z-40 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-police-neon/20 border border-police-neon rounded-full flex items-center justify-center text-police-accent text-xl font-bold shadow-[0_0_15px_rgba(99,102,241,0.5)]">
+                수사
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-wider text-white flex items-center gap-2">
+                  스마트 수사 지휘 및 정보제공요청 통제 시스템
+                  <span className="text-xs bg-police-neon text-white px-2 py-0.5 rounded-full font-black animate-pulse">
+                    SMART CASE ROOM
+                  </span>
+                </h1>
+                <p className="text-xs text-slate-400">
+                  2024년 신설 실종아동법 제9조의2(정보제공요청 등) 및 시행령 제4조의5 완벽 구현 모듈
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setShowPrintModal(true)}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+              >
+                🖨️ [법 제9조의2] 정보제공요청서 공문서 인쇄
+              </button>
+            </div>
+          </header>
+
+          {/* --- MAIN GRID LAYOUT --- */}
+          <main className="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full flex-grow no-print">
+            
+            {/* ================= LEFT Panel: 법 제9조의2 요청서 작성실 (4/12) ================= */}
+            <section className="lg:col-span-4 flex flex-col gap-5">
+              
+              {/* 1. 수사 연동 사건 선택 */}
+              <div className="glass-panel rounded-xl p-4 border-l-4 border-police-neon">
+                <h3 className="text-xs font-bold text-police-accent mb-3 flex items-center gap-1.5">
+                  <span>👤</span> 1. 수사 대상 사건 연동
+                </h3>
+                <div className="space-y-2 text-xs">
+                  <label className="block text-slate-400 mb-1">활성 실종 사건 선택</label>
+                  <select 
+                    className="w-full p-2 rounded glass-input"
+                    value={selectedCaseId}
+                    onChange={(e) => setSelectedCaseId(e.target.value)}
+                  >
+                    {MOCK_CASES.map(c => (
+                      <option key={c.id} value={c.id}>{c.name} (만 {c.age}세) - {c.id}</option>
+                    ))}
+                  </select>
+
+                  <div className="mt-2 bg-slate-900/60 p-2.5 rounded border border-slate-800 text-[11px] space-y-1">
+                    <div>대상 보호자: <strong>{selectedCase.guardianName}</strong></div>
+                    <div>보호자 연락처: <strong className="text-police-accent">{selectedCase.guardianContact}</strong></div>
+                    <div>최초 발생장소: <strong className="text-white">{selectedCase.missingLoc}</strong></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. 정보제공요청서 온라인 기안실 */}
+              <div className="glass-panel rounded-xl p-4 border-l-4 border-amber-500">
+                <h3 className="text-xs font-bold text-amber-400 mb-3 flex items-center gap-1.5">
+                  <span>📄</span> 2. 정보제공요청 공문서 기안 (법 제9조의2)
+                </h3>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-slate-400 mb-1">요청 대상 정보 분류</label>
+                    <select 
+                      className="w-full p-2 rounded glass-input font-bold"
+                      value={requestType}
+                      onChange={(e) => setRequestType(e.target.value)}
+                    >
+                      <option value="신용카드">💳 신용·직불·선불카드 사용 내역 (제3호)</option>
+                      <option value="CCTV">📹 CCTV 영상처리기기 녹화본 (제1호)</option>
+                      <option value="교통카드">🚇 교통카드 사용명세 이력 (제2호)</option>
+                      <option value="진료기록">🏥 병의원 처방전/진료일시 (제4호)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1">정보 보유 제공기관장</label>
+                    <input type="text" className="w-full p-2 rounded glass-input" value={targetAgency} onChange={(e) => setTargetAgency(e.target.value)} />
+                  </div>
+
+                  {/* 신용카드/진료기록 선택 시 법정 초과 정보 락(Lock) 경고 및 가이드 피드백 */}
+                  <div className="p-2.5 bg-red-950/40 border border-red-500/40 rounded text-[10px] text-red-300 leading-normal">
+                    {requestType === "신용카드" && (
+                      <strong>🔒 법정 제한 락: 「여신전문금융업법」상 금액 및 품목 정보는 포함이 금지되며, 오직 '사용일시'와 '사용장소'만 제공 요청서에 기재되어 발송됩니다.</strong>
+                    )}
+                    {requestType === "진료기록" && (
+                      <strong>🔒 법정 제한 락: 「의료법」상 상세 질환이나 병명 정보 요청은 금지되며, 오직 '진료일시'와 '의료기관 연락처'만 요청이 허용됩니다.</strong>
+                    )}
+                    {requestType === "CCTV" && (
+                      "CCTV 영상 요청은 수색 목적 반경 내의 고정형 영상 정보처리기기에 한해 영상 자료 열람 및 복사본 제공을 강제 청구합니다."
+                    )}
+                    {requestType === "교통카드" && (
+                      "교통카드 이용 이력은 실종자가 대중교통망을 타 도시로 이탈했을 가능성을 특정하기 위해 승하차 시간과 역 정보를 청구합니다."
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1">상세 청구 정보 범위</label>
+                    <textarea className="w-full p-2 rounded glass-input text-[11px]" rows="3" value={requestedDetails} onChange={(e) => setRequestedDetails(e.target.value)} />
+                  </div>
+
+                  <button 
+                    onClick={() => setShowPrintModal(true)}
+                    className="w-full py-2 bg-police-neon text-white font-bold rounded hover:bg-indigo-600 transition"
+                  >
+                    📝 행안부령 정보제공요청서 자동 렌더링
+                  </button>
+                </div>
+              </div>
+
+            </section>
+
+            {/* ================= MIDDLE Panel: 전술 맵 및 수사 단서 추적 (4/12) ================= */}
+            <section className="lg:col-span-4 flex flex-col gap-4">
+              <div className="glass-panel rounded-xl p-4 flex-grow flex flex-col">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-xs font-bold text-police-accent flex items-center gap-1">
+                    <span>📡</span> 실시간 스마트 수사 추적 경로망 (전술 지도)
+                  </h3>
+                  <span className="text-[10px] text-slate-400">수사 단서에 연계된 동선 연장</span>
+                </div>
+
+                {/* SVG Visual Tracker map */}
+                <div className="border border-slate-700/60 rounded-lg p-2 bg-slate-950 flex-grow flex items-center justify-center relative min-h-[300px]">
+                  
+                  <svg className="w-full h-full max-h-[350px]" viewBox="0 0 400 350">
+                    <defs>
+                      <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#6366f1" />
+                      </marker>
+                    </defs>
+
+                    {/* Nodes (Stations/Locations) */}
+                    <g className="cursor-pointer">
+                      {/* LKP (강남역 놀이터) */}
+                      <circle cx="80" cy="270" r="16" fill="#1e293b" stroke="#ef4444" strokeWidth="2.5" />
+                      <text x="80" y="274" fontSize="10" fill="#ffffff" textAnchor="middle" fontWeight="bold">LKP</text>
+                      <text x="80" y="300" fontSize="9" fill="#94a3b8" textAnchor="middle">강남역 놀이터</text>
+
+                      {/* Subway (신분당선) */}
+                      {activeStep >= 1 && (
+                        <g className="transition-all duration-500">
+                          <line x1="80" y1="254" x2="160" y2="180" stroke="#6366f1" strokeWidth="2" strokeDasharray="4" markerEnd="url(#arrow)" />
+                          <circle cx="160" cy="170" r="14" fill="#1e293b" stroke="#6366f1" strokeWidth="2" />
+                          <text x="160" y="174" fontSize="9" fill="#ffffff" textAnchor="middle">🚇</text>
+                          <text x="160" y="196" fontSize="8" fill="#94a3b8" textAnchor="middle">지하철 탑승</text>
+                        </g>
+                      )}
+
+                      {/* Store (GS25) */}
+                      {activeStep >= 2 && (
+                        <g className="transition-all duration-500">
+                          <line x1="160" y1="156" x2="240" y2="100" stroke="#6366f1" strokeWidth="2" strokeDasharray="4" markerEnd="url(#arrow)" />
+                          <circle cx="240" cy="90" r="14" fill="#1e293b" stroke="#f59e0b" strokeWidth="2" />
+                          <text x="240" y="94" fontSize="9" fill="#ffffff" textAnchor="middle">💳</text>
+                          <text x="240" y="116" fontSize="8" fill="#94a3b8" textAnchor="middle">편의점 결제</text>
+                        </g>
+                      )}
+
+                      {/* CCTV Point (강남구청역 보도) */}
+                      {activeStep >= 3 && (
+                        <g className="transition-all duration-500">
+                          <line x1="240" y1="76" x2="320" y2="70" stroke="#6366f1" strokeWidth="2" strokeDasharray="4" markerEnd="url(#arrow)" />
+                          <circle cx="320" cy="70" r="14" fill="#1e293b" stroke="#8b5cf6" strokeWidth="2" />
+                          <text x="320" y="74" fontSize="9" fill="#ffffff" textAnchor="middle">📹</text>
+                          <text x="320" y="96" fontSize="8" fill="#94a3b8" textAnchor="middle">CCTV 판독</text>
+                        </g>
+                      )}
+
+                      {/* Safe Destination (청소년 쉼터) */}
+                      {activeStep >= 4 && (
+                        <g className="transition-all duration-500 animate-bounce">
+                          <line x1="320" y1="84" x2="280" y2="230" stroke="#10b981" strokeWidth="2.5" markerEnd="url(#arrow)" />
+                          <circle cx="280" cy="230" r="18" fill="#064e3b" stroke="#10b981" strokeWidth="3" />
+                          <text x="280" y="234" fontSize="11" fill="#ffffff" textAnchor="middle" fontWeight="bold">🏠</text>
+                          <text x="280" y="260" fontSize="9" fill="#34d399" textAnchor="middle" fontWeight="bold">쉼터 발견 보호</text>
+                        </g>
+                      )}
+                    </g>
+                  </svg>
+                </div>
+
+                <div className="mt-3 flex gap-2">
+                  <button 
+                    onClick={handleTriggerInvestStep}
+                    disabled={activeStep >= 4 || isCaseClosed}
+                    className={`w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded text-xs transition ${activeStep >= 4 || isCaseClosed ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700' : ''}`}
+                  >
+                    👣 다음 수사 추적 단서 확보 (Step)
+                  </button>
+                  <button 
+                    onClick={handleCloseInvestigation}
+                    disabled={activeStep < 4 || isCaseClosed}
+                    className={`w-1/2 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-xs transition ${activeStep < 4 || isCaseClosed ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700' : ''}`}
+                  >
+                    🎉 사건 발견 종결
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* ================= RIGHT Panel: 보호자 통지 & 파기 대장 관리 (4/12) ================= */}
+            <section className="lg:col-span-4 flex flex-col gap-5">
+
+              {/* 1. 법 제9조의2 제3항 보호자 긴급 통지 모듈 */}
+              <div className="glass-panel rounded-xl p-4 border-t-4 border-police-neon">
+                <h3 className="text-xs font-bold text-police-accent mb-3 flex items-center gap-1.5">
+                  <span>📬</span> 3. 보호자 의무 통지 시스템 (법 제3항 준수)
+                </h3>
+
+                <p className="text-[10px] text-slate-400 mb-2 leading-relaxed">
+                  정보제공요청서에 근거해 생활정보를 수집한 경우, 법령에 의거하여 즉각 보호자에게 통보하여 투명성을 확보해야 합니다.
+                </p>
+
+                <div className="space-y-3">
+                  <div className="bg-slate-900 p-2.5 rounded border border-slate-700 text-[10px] font-mono leading-normal text-slate-300">
+                    <span className="text-police-accent font-bold block mb-1">📲 보호자 문자(SMS) 자동 완성</span>
+                    <textarea 
+                      className="w-full bg-slate-950 p-1.5 border border-slate-800 rounded text-[10px] text-white leading-normal h-20"
+                      value={smsText}
+                      onChange={(e) => setSmsText(e.target.value)}
+                    />
+                  </div>
+
+                  <button 
+                    onClick={handleSendSms}
+                    disabled={activeStep === 0 || isSmsSent}
+                    className={`w-full py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded text-xs transition ${activeStep === 0 || isSmsSent ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700' : ''}`}
+                  >
+                    ✉️ 보호자 긴급 의무 SMS 전송 승인
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. 지휘관 수사기법 대안 비교 분석 매트릭스 */}
+              <div className="glass-panel rounded-xl p-4 border-t-4 border-amber-500">
+                <h3 className="text-xs font-bold text-amber-400 mb-3 flex items-center gap-1.5">
+                  <span>⚖️</span> 4. 20년차 베테랑의 수사 대안 비교 분석
+                </h3>
+
+                <div className="space-y-2 text-xs">
+                  {/* 대안 1 */}
+                  <div 
+                    onClick={() => {
+                      setSelectedTactic("대안 A: 영장 없는 신속 행정조사 요청 (실종법 제9조의2)");
+                      setTacticJustification("생명 피해 위험이 높은 중/고위험 지적장애인/치매환자 사건으로, 법원 영장 청구 시 최소 24시간이 소요되어 골든타임을 상실할 가능성이 농후함. 즉시 영장 없이 3대 수사 생활정보(CCTV, 교통카드)를 통지 의무를 수반하여 신속 청구함.");
+                    }}
+                    className={`p-2 rounded border cursor-pointer transition ${selectedTactic.startsWith("대안 A") ? 'bg-police-blue border-police-neon text-white' : 'bg-slate-800/40 border-slate-700/60 text-slate-300 hover:bg-slate-800'}`}
+                  >
+                    <div className="flex justify-between font-bold text-[10px]">
+                      <span>대안 A: 영장 없는 행정조사 (제9조의2)</span>
+                      <span className="text-police-accent">속도: 최상 (즉시)</span>
+                    </div>
+                    <p className="text-[9px] text-slate-400 mt-1">장점: 1시간 이내 정보 확보 가능 / 단점: 구매 품목/금액은 조회 불가.</p>
+                  </div>
+
+                  {/* 대안 2 */}
+                  <div 
+                    onClick={() => {
+                      setSelectedTactic("대안 B: 형소법상 긴급 압수수색 영장 청구 (SNS 대화 내용 확보)");
+                      setTacticJustification("실종 경위 분석 시 단순 지리 미숙이 아닌 면식범에 의한 유인/납치 혐의가 포착되었으므로, 강제력을 동원하기 위해 즉각 카카오톡 대화방 압수영장을 법원에 기각 없이 신청함.");
+                    }}
+                    className={`p-2 rounded border cursor-pointer transition ${selectedTactic.startsWith("대안 B") ? 'bg-police-blue border-police-neon text-white' : 'bg-slate-800/40 border-slate-700/60 text-slate-300 hover:bg-slate-800'}`}
+                  >
+                    <div className="flex justify-between font-bold text-[10px]">
+                      <span>대안 B: 형소법 영장 수사 (카카오톡 등)</span>
+                      <span className="text-red-400">속도: 보통 (24-48시간)</span>
+                    </div>
+                    <p className="text-[9px] text-slate-400 mt-1">장점: 메신저 대화 확보 등 완전 강제력 확보 / 단점: 영장 심사에 따른 법정 지연 발생.</p>
+                  </div>
+                </div>
+
+                {selectedTactic && (
+                  <div className="mt-2 bg-slate-900/60 p-2 border border-slate-800 rounded text-[10px]">
+                    <span className="text-police-accent font-bold block mb-1">✍️ 수사팀 지휘관 수사지시서</span>
+                    <div className="font-bold text-white mb-1">{selectedTactic}</div>
+                    <textarea 
+                      className="w-full p-1 bg-slate-950 border border-slate-850 rounded text-[10px] leading-normal" 
+                      rows="2" 
+                      value={tacticJustification} 
+                      onChange={(e) => setTacticJustification(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+            </section>
+
+          </main>
+
+          {/* --- BOTTOM PROCESSED LOGS --- */}
+          <footer className="max-w-7xl mx-auto px-4 mt-6 w-full no-print">
+            
+            {/* Real-time timeline log */}
+            <div className="glass-panel rounded-xl p-4 border-l-4 border-police-neon mb-6">
+              <h3 className="font-bold text-police-accent flex items-center gap-1.5 text-xs mb-3">
+                <span>⏱️</span> 실시간 지능형 수사 추적 로그 (Chronological Investigation Logs)
+              </h3>
+              <div className="space-y-3">
+                {investigationLogs.map((log) => (
+                  <div key={log.step} className="flex gap-3 text-xs border-b border-slate-800/60 pb-2">
+                    <span className="text-police-accent font-mono font-bold">[{log.time}]</span>
+                    <span className="text-lg leading-none">{log.icon}</span>
+                    <div>
+                      <strong className="text-white block">{log.title}</strong>
+                      <p className="text-slate-400 text-[11px] mt-0.5 leading-snug">{log.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Destruction audit log */}
+            <div className="glass-panel rounded-xl p-5 border-l-4 border-green-500">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-green-400 flex items-center gap-1.5 text-sm">
+                  <span>🔒</span> 정보제공 수집 정보 파기 대장 [실종아동법 시행령 제4조의5 제3항 기준]
+                </h3>
+                <span className="text-[10px] text-slate-400">보존 기간: 영구 (행정 감사용)</span>
+              </div>
+
+              <div className="overflow-x-auto text-[11px]">
+                <table className="w-full text-slate-300 border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-slate-700 bg-slate-900/60 text-slate-400">
+                      <th className="p-2">파기 일련번호</th>
+                      <th className="p-2">사건번호 ID</th>
+                      <th className="p-2">대상자 성명</th>
+                      <th className="p-2">파기 정보 상세</th>
+                      <th className="p-2">파기 완료일시</th>
+                      <th className="p-2">파기 실행 책임자</th>
+                      <th className="p-2">기술적 파기 처리법</th>
+                      <th className="p-2 text-green-400">파기 상태</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {destructionLogs.length > 0 ? (
+                      destructionLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-slate-800/20">
+                          <td className="p-2 font-mono">{log.id}</td>
+                          <td className="p-2 font-mono">{log.caseId}</td>
+                          <td className="p-2 font-bold text-white">{log.targetName}</td>
+                          <td className="p-2 text-slate-400">{log.destroyedData}</td>
+                          <td className="p-2 font-mono text-[10px]">{log.destroyedTime}</td>
+                          <td className="p-2">{log.destroyer}</td>
+                          <td className="p-2 text-slate-400">{log.method}</td>
+                          <td className="p-2 font-bold text-green-400">{log.status}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="8" className="p-8 text-center text-slate-500 text-xs">
+                          현재 파기 완료 처리된 실종수사 생활정보(법 제9조의2) 파기 이력이 존재하지 않습니다.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </footer>
+
+          {/* ========================================================
+              MODAL: 정보제공요청서 행안부령 표준 서식 완벽 구현 (Batang, HWP)
+              ======================================================== */}
+          {showPrintModal && (
+            <div className="fixed inset-0 bg-black/90 z-50 overflow-y-auto p-4 flex flex-col items-center justify-start no-print">
+              <div className="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-xl p-4 mb-4 flex justify-between items-center">
+                <span className="text-sm font-bold text-white flex items-center gap-1.5">
+                  🖨️ [행안부령 제1호 서식] 실종아동등 정보제공 요청서 인쇄 미리보기
+                </span>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold"
+                  >
+                    지금 인쇄/팩스출력 (Print)
+                  </button>
+                  <button 
+                    onClick={() => setShowPrintModal(false)}
+                    className="px-4 py-2 bg-slate-800 text-slate-300 rounded text-xs hover:bg-slate-700"
+                  >
+                    미리보기 닫기
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Document Container (A4 sheet styled in HWP format) */}
+              <div className="w-full max-w-[210mm] min-h-[297mm] bg-white text-black p-12 shadow-2xl rounded border border-slate-300 text-xs">
+                
+                {/* Official Rule Identifier */}
+                <div className="flex justify-between items-end border-b border-black pb-2 mb-4">
+                  <span className="text-[10px] text-gray-600">[시행규칙 서식 제1호] &lt;개정 2024. 9. 20.&gt;</span>
+                  <span className="text-[10px] text-gray-600">실종아동등의 보호 및 지원에 관한 법률 시행규칙</span>
+                </div>
+
+                {/* Main Form Title */}
+                <div className="border-4 border-black p-4 text-center my-6">
+                  <h1 className="text-2xl font-extrabold tracking-widest font-serif">실종아동등 정보제공 요청서</h1>
+                </div>
+
+                {/* Statutory Clause Block */}
+                <div className="my-4 leading-relaxed font-serif text-[11px]">
+                  <strong>수 신:</strong> {targetAgency}<br/>
+                  <strong>발 신:</strong> {deptHead}<br/><br/>
+                  귀 기관의 일익 번창을 기원합니다.<br/>
+                  「실종아동등의 보호 및 지원에 관한 법률」 제9조의2제1항 및 같은 법 시행령 제4조의5제1항에 의거하여, 아래와 같이 실종아동등의 조속한 수색 및 조기 발견을 위한 정보 제공을 공식 청구합니다.
+                </div>
+
+                {/* Main Form Data Table */}
+                <table className="w-full border-collapse border-2 border-black mb-6 text-xs">
+                  <tbody>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2.5 font-bold w-28 text-center" rowSpan="3">실종아동등<br/>인적사항</td>
+                      <td className="border border-black bg-gray-50 p-2 font-bold w-24 text-center">성명 / 성별</td>
+                      <td className="border border-black p-2 w-44">{selectedCase.name} ({selectedCase.gender}자)</td>
+                      <td className="border border-black bg-gray-50 p-2 font-bold w-24 text-center">생년월일</td>
+                      <td className="border border-black p-2 font-mono">만 {selectedCase.age}세</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-50 p-2 font-bold text-center">대상자 유형</td>
+                      <td className="border border-black p-2" colSpan="3">{selectedCase.type}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-50 p-2 font-bold text-center">최초 실종장소</td>
+                      <td className="border border-black p-2" colSpan="3">{selectedCase.missingLoc}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2.5 font-bold text-center">요청 정보 구분</td>
+                      <td className="border border-black p-2 font-bold text-indigo-600" colSpan="4">
+                        [ ✔ ] {requestType} 정보제공요청 (법 제9조의2 제1항 의거)
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2.5 font-bold text-center">요청 상세 내용<br/>및 정보 범위</td>
+                      <td className="border border-black p-2.5 leading-snug font-mono text-[10px]" colSpan="4">
+                        {requestedDetails}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2.5 font-bold text-center">요청 사유</td>
+                      <td className="border border-black p-2.5 leading-snug text-[10px]" colSpan="4">
+                        {requestReason}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black bg-gray-100 p-2.5 font-bold text-center">제공 기한</td>
+                      <td className="border border-black p-2 font-bold text-red-500" colSpan="4">
+                        송신을 접수한 시점으로부터 지체 없이 (긴급 긴급 사건)
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Legal compliance notice warning */}
+                <div className="border border-gray-400 p-3 bg-gray-50 text-[10px] leading-relaxed mb-6 font-sans">
+                  <strong>⚠️ 법정 목적 외 이용 금지 및 파기 경고 고지 (법 제9조의2제2항)</strong><br/>
+                  제공받은 정보는 실종아동등의 수색 및 조기 발견 목적으로만 사용되며, 목적 달성(아동 발견) 즉시 관련 법규에 의거하여 복원이 불가능한 기술적 방법으로 즉시 영구 파기되고 관련 이력은 행정 감사 장부에 기록 보존됩니다. 이를 위반하여 목적 외 이용 시 동법 제17조제2호에 의거하여 5년 이하의 징역 또는 5천만원 이하의 벌금에 처해질 수 있습니다.
+                </div>
+
+                {/* Sign block */}
+                <div className="text-center my-10 font-bold leading-loose text-sm font-serif">
+                  「실종아동등의 보호 및 지원에 관한 법률」 제9조의2제1항 및 같은 법 시행령 제4조의5에 따라<br/>
+                  위와 같이 정보 제공을 정식으로 요청합니다.
+                </div>
+
+                <div className="text-right my-6 font-bold text-sm font-serif">
+                  {new Date().getFullYear()}년 {String(new Date().getMonth() + 1).padStart(2, '0')}월 {String(new Date().getDate()).padStart(2, '0')}일
+                </div>
+
+                <div className="flex justify-between items-center font-bold text-base my-8 font-serif">
+                  <span className="text-lg">{deptHead} (직인생략)</span>
+                  <span className="text-xl">직인생략</span>
+                </div>
+
+                {/* Footer specs */}
+                <table className="w-full border-collapse border-t border-gray-400 pt-3 text-[9px] text-gray-500">
+                  <tbody>
+                    <tr>
+                      <td>기안부서: {officerDept}</td>
+                      <td>기안자: 경위 {officerName}</td>
+                      <td className="text-right">연락처: 02-567-0112</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<InvestApp />);
+  </script>
+</body>
+</html>
